@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Árvore genealógica — Família Marques</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary: #243b53;
+            --primary-soft: #3d5a80;
+            --accent: #bc6c25;
+            --accent-soft: #dda15e;
+            --bg: #eef2f6;
+            --card-bg: #ffffff;
+            --text: #1c2430;
+            --muted: #5c6778;
+            --border: #cfd8e3;
+            --shadow: 0 8px 28px rgba(36, 59, 83, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(180deg, #e8eef5 0%, #dce4ef 55%, #d4dde8 100%);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.35rem;
+            color: var(--primary);
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            font-size: 0.78rem;
+            color: var(--muted);
+            font-weight: 400;
+            max-width: 28rem;
+            line-height: 1.35;
+        }
+
+        .status {
+            font-size: 0.72rem;
+            color: var(--primary-soft);
+        }
+
+        .legend-hint {
+            font-size: 0.7rem;
+            color: var(--muted);
+            max-width: 36rem;
+            line-height: 1.35;
+            margin-top: 0.15rem;
+        }
+
+        .legend-hint strong { color: var(--primary-soft); font-weight: 600; }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        button, .btn-link {
+            padding: 0.55rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(0,0,0,0.15);
+            background: var(--primary-soft);
+        }
+
+        button.secondary {
+            background: white;
+            color: var(--primary);
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        button.secondary:hover {
+            background: #fafafa;
+        }
+
+        .btn-link {
+            text-decoration: none;
+            display: inline-block;
+            background: var(--accent);
+        }
+
+        .btn-link:hover {
+            background: #a84a32;
+            transform: translateY(-1px);
+        }
+
+        #chart-container {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+            cursor: grab;
+        }
+
+        #chart-container:active { cursor: grabbing; }
+
+        .node-card {
+            border-radius: 11px;
+            border-width: 2px;
+            border-style: solid;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(36, 59, 83, 0.12);
+            width: 100%;
+            height: 100%;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .node-card:hover {
+            box-shadow: 0 8px 22px rgba(36, 59, 83, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .node-role {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 3px;
+        }
+
+        .node-name {
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.22;
+        }
+
+        .node-parents {
+            font-size: 8px;
+            text-align: center;
+            margin-top: 3px;
+            line-height: 1.28;
+            max-height: 2.5em;
+            overflow: hidden;
+            opacity: 0.92;
+        }
+
+        .node-spouse {
+            font-size: 10px;
+            font-style: italic;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            padding-top: 4px;
+            margin-top: 4px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: rgba(244, 241, 234, 0.75);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .loader p { color: var(--muted); font-size: 0.9rem; }
+
+        .spinner {
+            width: 42px;
+            height: 42px;
+            border: 3px solid rgba(0,0,0,0.08);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #cors-warning, #error-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 1.75rem;
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            z-index: 2000;
+            text-align: center;
+            max-width: 420px;
+            border: 1px solid var(--accent-soft);
+        }
+
+        #cors-warning h3, #error-panel h3 {
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        #cors-warning p, #error-panel p {
+            margin-bottom: 0.65rem;
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.45;
+        }
+
+        #analysis-panel {
+            display: none;
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: min(420px, 100vw);
+            background: #fffef9;
+            border-left: 1px solid var(--border);
+            box-shadow: -8px 0 32px rgba(0,0,0,0.08);
+            z-index: 1500;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #analysis-panel.open { display: flex; }
+
+        .analysis-head {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.95);
+        }
+
+        .analysis-head h2 {
+            font-family: Cinzel, serif;
+            font-size: 1rem;
+            color: var(--primary);
+        }
+
+        .analysis-body {
+            padding: 1rem 1.25rem;
+            overflow: auto;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            color: var(--text);
+        }
+
+        .analysis-body h3 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin: 1rem 0 0.4rem;
+        }
+
+        .analysis-body h3:first-child { margin-top: 0; }
+
+        .analysis-body table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        .analysis-body th, .analysis-body td {
+            border: 1px solid var(--border);
+            padding: 0.35rem 0.45rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .analysis-body th { background: #f0ebe3; color: var(--primary); }
+
+        .analysis-warn {
+            background: #fff5f0;
+            border-left: 3px solid var(--accent);
+            padding: 0.5rem 0.65rem;
+            margin: 0.35rem 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .analysis-dim { color: var(--muted); font-size: 0.72rem; }
+
+        #analysis-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.2);
+            z-index: 1400;
+        }
+
+        #analysis-backdrop.open { display: block; }
+
+        .branch-dock {
+            position: fixed;
+            z-index: 500;
+            width: min(280px, calc(100vw - 1.5rem));
+            max-height: min(72vh, 520px);
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(36, 59, 83, 0.18);
+            touch-action: none;
+            user-select: none;
+        }
+
+        .branch-dock-header {
+            padding: 0.65rem 0.85rem;
+            font-family: Cinzel, serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: linear-gradient(180deg, #eef3f9 0%, #e4ebf4 100%);
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid var(--border);
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.35rem;
+        }
+
+        .branch-dock-header:active { cursor: grabbing; }
+
+        .branch-dock-body {
+            padding: 0.6rem 0.75rem 0.75rem;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .branch-dock-hint {
+            font-size: 0.68rem;
+            color: var(--muted);
+            line-height: 1.35;
+            margin-bottom: 0.5rem;
+        }
+
+        .branch-dock-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            max-height: 42vh;
+            overflow-y: auto;
+        }
+
+        .branch-chip {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.45rem 0.55rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            font-family: Outfit, sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            color: var(--text);
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .branch-chip:hover {
+            background: #eef2f8;
+            border-color: var(--primary-soft);
+        }
+
+        .branch-chip.active {
+            background: #e0e7f1;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .branch-chip.dim {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .node-card.node-card--focusable {
+            cursor: pointer;
+        }
+
+        .node-card .node-focus-hint {
+            font-size: 0.62rem;
+            color: inherit;
+            opacity: 0.75;
+            margin-top: 4px;
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+
+        @media (max-width: 720px) {
+            header { flex-direction: column; align-items: stretch; }
+            .controls { justify-content: center; }
+            h1 { font-size: 1.15rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>Árvore genealógica</h1>
+            <p class="subtitle">Organograma da família a partir da planilha oficial. <strong>Pan:</strong> arraste o fundo vazio; <strong>zoom:</strong> roda do mouse ou pinça no celular. Use o painel <strong>Ramos</strong> ou toque num cartão para ver só uma família.</p>
+            <span id="data-status" class="status"></span>
+            <p class="legend-hint">Cada <strong>cor</strong> segue o ramo de um filho(a) direto(a) de Hélio; tons mais escuros nos nomes = mais fundo na linha. Cartões <strong>menores</strong> = gerações mais novas (bisneto, tataraneto).</p>
+        </div>
+        <div class="controls">
+            <button type="button" class="secondary" onclick="setFamilyBranchFocus(null)">Toda a família</button>
+            <button type="button" onclick="fitChart()">Enquadrar tudo</button>
+            <button type="button" onclick="exportChartImg()">Salvar imagem</button>
+            <button type="button" class="secondary" onclick="refreshFromSheet()" title="Ignora o cache e lê a planilha de novo">Atualizar da planilha</button>
+            <button type="button" class="secondary" onclick="openGenealogyAnalysis()">Análise da planilha</button>
+            <a class="btn-link" id="sheet-link" href="#" target="_blank" rel="noopener">Abrir planilha</a>
+        </div>
+    </header>
+
+    <div id="analysis-backdrop" onclick="closeGenealogyAnalysis()"></div>
+    <aside id="analysis-panel" aria-label="Análise genealógica">
+        <div class="analysis-head">
+            <h2>Análise genealógica</h2>
+            <button type="button" class="secondary" onclick="closeGenealogyAnalysis()">Fechar</button>
+        </div>
+        <div id="analysis-body" class="analysis-body"></div>
+    </aside>
+
+    <div id="loader" class="loader">
+        <div class="spinner"></div>
+        <p id="loader-msg">Carregando dados…</p>
+    </div>
+
+    <div id="cors-warning">
+        <h3>Acesso em arquivo local</h3>
+        <p>O navegador bloqueia leitura da planilha quando você abre o HTML como <code>file://</code>.</p>
+        <p><strong>Use o Live Server</strong> (ou outro servidor local / GitHub Pages) para abrir por <code>http://</code>.</p>
+        <button type="button" onclick="document.getElementById('cors-warning').style.display='none'">Entendi</button>
+    </div>
+
+    <div id="error-panel">
+        <h3>Não foi possível carregar</h3>
+        <p id="error-panel-text"></p>
+        <button type="button" onclick="document.getElementById('error-panel').style.display='none'">Fechar</button>
+    </div>
+
+    <div id="branch-dock" class="branch-dock" aria-label="Seletor de ramos da família">
+        <div class="branch-dock-header" id="branch-dock-drag-handle">
+            <span>Ramos</span>
+            <span style="font-size:0.65rem;font-weight:400;color:var(--muted);">⋮⋮ arrastar</span>
+        </div>
+        <div class="branch-dock-body">
+            <p class="branch-dock-hint">Toque num <strong>nome</strong> abaixo ou num <strong>cartão</strong> colorido na árvore para isolar aquele ramo. Use <strong>Enquadrar tudo</strong> para recentrar.</p>
+            <div id="branch-dock-list" class="branch-dock-list"></div>
+        </div>
+    </div>
+
+    <div id="chart-container"></div>
+
+    <script>
+        const SHEET_ID = '13PqSDZ4y3UePTXLc3sLHiGLcsNyLMSf28uwBzeeNAoA';
+        const SHEET_GID = '0';
+        const SHEET_EDIT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SHEET_GID}#gid=${SHEET_GID}`;
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+
+        const CACHE_KEY = 'arvoregenealogica_sheet_csv_v1';
+        const CACHE_META_KEY = 'arvoregenealogica_sheet_csv_meta_v1';
+        const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+        /**
+         * Ordem genealógica em memória: descendentes de Hélio Marques e Celina Marques.
+         * "order" = degraus abaixo dos fundadores no vínculo Pai/Mãe usado no organograma.
+         * Agregados: cônjuge que entra na família; convém manter Tipo = Agregado e alinhar à geração do(a) par.
+         */
+        const GENEALOGY_ORDER_TABLE = Object.freeze([
+            {
+                order: 0,
+                label: 'Fundadores',
+                tiposAceitos: ['Fundador', 'Fundadora', 'Tataravó', 'Ancestral', 'Raiz'],
+                papel: 'Hélio Marques e Celina Marques — origem da linha neste organograma.',
+                agregado: 'Entre si como casal; não usam coluna Agregado para um ao outro.'
+            },
+            {
+                order: 1,
+                label: 'Filho(a)',
+                tiposAceitos: ['Filho', 'Filha'],
+                papel: 'Descendente direto dos fundadores.',
+                agregado: 'Quem casa com filho(a) de sangue: Tipo Agregado; mesma “geração” familiar que o(a) par.'
+            },
+            {
+                order: 2,
+                label: 'Neto(a)',
+                tiposAceitos: ['Neto', 'Net', 'Neta'],
+                papel: 'Filho(a) de um filho(a) dos fundadores.',
+                agregado: 'Cônjuge de neto(a): Agregado.'
+            },
+            {
+                order: 3,
+                label: 'Bisneto(a)',
+                tiposAceitos: ['Bisneto', 'Bisneta'],
+                papel: 'Filho(a) de um neto(a).',
+                agregado: 'Cônjuge de bisneto(a): Agregado.'
+            },
+            {
+                order: 4,
+                label: 'Tataraneto(a)',
+                tiposAceitos: ['Tataraneto', 'Tataraneta', 'Tatrarneto'],
+                papel: 'Filho(a) de um bisneto(a).',
+                agregado: 'Cônjuge de tataraneto(a): Agregado.'
+            }
+        ]);
+
+        const FOUNDERS = Object.freeze({ helio: 'Hélio Marques', celina: 'Celina Marques' });
+
+        let chart;
+        let lastGenealogyReport = null;
+        let fullChartData = [];
+        let focusedBranchKey = null;
+        const BRANCH_DOCK_POS_KEY = 'arvoregenealogica_branch_dock_pos';
+
+        function normalizeTipoKey(s) {
+            if (!s || typeof s !== 'string') return '';
+            return s.trim().normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+        }
+
+        function rankFromDeclaredTipo(tipoRaw) {
+            const t = normalizeTipoKey(tipoRaw);
+            if (!t || t === 'agregado' || t === 'membro') return null;
+            for (const row of GENEALOGY_ORDER_TABLE) {
+                if (row.tiposAceitos.some(a => normalizeTipoKey(a) === t)) return row.order;
+            }
+            return null;
+        }
+
+        function labelForOrder(order) {
+            const row = GENEALOGY_ORDER_TABLE.find(r => r.order === order);
+            return row ? row.label : '—';
+        }
+
+        /** Profundidade só pelo parentId já resolvido (Pai||Mãe) até um fundador. */
+        function depthBelowFounders(personId, people, r1, r2) {
+            if (personId === r1 || personId === r2) return 0;
+            let depth = 0;
+            let cur = personId;
+            for (let i = 0; i < 80; i++) {
+                const n = people.get(cur);
+                if (!n || !n.parentId) return null;
+                if (n.parentId === r1 || n.parentId === r2) return depth + 1;
+                cur = n.parentId;
+                depth++;
+            }
+            return null;
+        }
+
+        function buildGenealogyAnalysis(people, rawData, r1, r2) {
+            const warnings = [];
+            const tiposFrequency = new Map();
+            const unknownTipos = new Set();
+
+            rawData.forEach(row => {
+                const tipo = row['Tipo']?.trim();
+                if (!tipo) return;
+                tiposFrequency.set(tipo, (tiposFrequency.get(tipo) || 0) + 1);
+                const tk = normalizeTipoKey(tipo);
+                if (rankFromDeclaredTipo(tipo) === null && tk !== 'agregado' && tk !== 'membro') {
+                    unknownTipos.add(tipo);
+                }
+            });
+
+            people.forEach((p, id) => {
+                const declared = rankFromDeclaredTipo(p.type);
+                const depth = depthBelowFounders(id, people, r1, r2);
+                if (p.type && normalizeTipoKey(p.type) === 'agregado') return;
+                if (declared === null || depth === null) return;
+                if (declared !== depth && depth >= 0) {
+                    warnings.push(
+                        id +
+                            ': coluna Tipo = “' +
+                            p.type +
+                            '” (ordem ' +
+                            declared +
+                            ', ' +
+                            labelForOrder(declared) +
+                            '), mas pelo vínculo Pai/Mãe usado no gráfico a distância aos fundadores é ' +
+                            depth +
+                            ' (“' +
+                            labelForOrder(depth) +
+                            '”). Revise Pai/Mãe ou o Tipo.'
+                    );
+                }
+            });
+
+            const suggestions = [
+                'Padronize **Tipo** com uma das palavras da tabela (Filho, Neto, Bisneto, Tataraneto ou Agregado). Evite variações não listadas (ex.: “Avó”) na mesma coluna dos descendentes, ou inclua-as na tabela no código.',
+                '**Pai** e **Mãe** devem repetir exatamente o nome que está em **Nome(s)** em outra linha. O organograma usa só um ascendente por pessoa (prioridade: Pai, senão Mãe). Se ambos forem sangue, prefira o que continua a linha principal.',
+                '**Agregado** é o cônjuge que entra na família; use sempre **Tipo** = Agregado para quem não é descendente de sangue de Hélio/Celina.',
+                'Corrija grafias únicas (ex.: Lúcio/Lucio, Claudimeire/Claudmeire) para não duplicar pessoas no mapa.',
+                'Linhas só de aniversário sem nome completo podem ser removidas ou preenchidas para não poluir a árvore.'
+            ];
+
+            return {
+                orderTable: GENEALOGY_ORDER_TABLE,
+                tiposFrequency: Array.from(tiposFrequency.entries()).sort((a, b) => b[1] - a[1]),
+                unknownTipos: Array.from(unknownTipos).sort(),
+                warnings,
+                suggestions
+            };
+        }
+
+        function renderGenealogyReportHtml(rep) {
+            if (!rep) return '<p class="analysis-dim">Sem dados.</p>';
+            let html = '<h3>Tabela de ordem (em memória)</h3>';
+            html += '<table><thead><tr><th>Ordem</th><th>Papel</th><th>Tipos aceitos</th><th>Agregado</th></tr></thead><tbody>';
+            rep.orderTable.forEach(row => {
+                html +=
+                    '<tr><td>' +
+                    row.order +
+                    '</td><td>' +
+                    row.label +
+                    '<br><span class="analysis-dim">' +
+                    row.papel +
+                    '</span></td><td>' +
+                    row.tiposAceitos.join(', ') +
+                    '</td><td>' +
+                    row.agregado +
+                    '</td></tr>';
+            });
+            html += '</tbody></table>';
+
+            html += '<h3>Tipos na planilha (frequência)</h3>';
+            if (rep.tiposFrequency.length === 0) html += '<p class="analysis-dim">Nenhum.</p>';
+            else {
+                html += '<table><thead><tr><th>Tipo</th><th>Linhas</th></tr></thead><tbody>';
+                rep.tiposFrequency.forEach(([t, n]) => {
+                    html += '<tr><td>' + escapeHtml(t) + '</td><td>' + n + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+
+            if (rep.unknownTipos.length) {
+                html +=
+                    '<h3>Tipos fora da tabela canónica</h3><p class="analysis-dim">Considere renomear na planilha ou estender GENEALOGY_ORDER_TABLE no código.</p>';
+                rep.unknownTipos.forEach(t => {
+                    html += '<div class="analysis-warn">' + escapeHtml(t) + '</div>';
+                });
+            }
+
+            html += '<h3>Avisos (Tipo vs. distância aos fundadores)</h3>';
+            html +=
+                '<p class="analysis-dim">Comparado ao vínculo único Pai ou Mãe usado no organograma. Divergências podem ser normais se a linha de sangue seguir só por um dos pais.</p>';
+            if (rep.warnings.length === 0) {
+                html += '<p>Nenhum aviso automático.</p>';
+            } else {
+                rep.warnings.slice(0, 80).forEach(w => {
+                    html += '<div class="analysis-warn">' + escapeHtml(w) + '</div>';
+                });
+                if (rep.warnings.length > 80) {
+                    html += '<p class="analysis-dim">… e mais ' + (rep.warnings.length - 80) + '.</p>';
+                }
+            }
+
+            html += '<h3>Sugestões para a planilha</h3>';
+            rep.suggestions.forEach(s => {
+                html += '<p>' + escapeHtml(s).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') + '</p>';
+            });
+
+            return html;
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function openGenealogyAnalysis() {
+            const panel = document.getElementById('analysis-panel');
+            const backdrop = document.getElementById('analysis-backdrop');
+            document.getElementById('analysis-body').innerHTML = renderGenealogyReportHtml(lastGenealogyReport);
+            panel.classList.add('open');
+            backdrop.classList.add('open');
+        }
+
+        function closeGenealogyAnalysis() {
+            document.getElementById('analysis-panel').classList.remove('open');
+            document.getElementById('analysis-backdrop').classList.remove('open');
+        }
+
+        function readCache() {
+            try {
+                const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || 'null');
+                const text = localStorage.getItem(CACHE_KEY);
+                if (!meta || typeof meta.t !== 'number' || !text) return null;
+                if (Date.now() - meta.t > CACHE_TTL_MS) return null;
+                return { text, savedAt: meta.t };
+            } catch {
+                return null;
+            }
+        }
+
+        function writeCache(text) {
+            localStorage.setItem(CACHE_KEY, text);
+            localStorage.setItem(CACHE_META_KEY, JSON.stringify({ t: Date.now() }));
+        }
+
+        function clearCache() {
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_META_KEY);
+        }
+
+        function formatAgo(ts) {
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 45) return 'agora há pouco';
+            const m = Math.floor(s / 60);
+            if (m < 60) return `há ${m} min`;
+            const h = Math.floor(m / 60);
+            if (h < 36) return `há ${h} h`;
+            return new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        }
+
+        function setStatus(fromCache, savedAt) {
+            const el = document.getElementById('data-status');
+            if (!el) return;
+            if (fromCache) {
+                el.textContent = 'Fonte: cópia em cache deste navegador · atualizado ' + formatAgo(savedAt) + ' · TTL 6 h';
+            } else {
+                el.textContent = 'Fonte: lido agora da planilha no Google';
+            }
+        }
+
+        async function fetchCsvFromNetwork() {
+            const response = await fetch(CSV_URL, { cache: 'no-store' });
+            if (!response.ok) throw new Error('Resposta HTTP ' + response.status);
+            return await response.text();
+        }
+
+        async function getCsvText(forceNetwork) {
+            if (!forceNetwork) {
+                const cached = readCache();
+                if (cached) return { text: cached.text, fromCache: true, savedAt: cached.savedAt };
+            }
+            const text = await fetchCsvFromNetwork();
+            writeCache(text);
+            return { text, fromCache: false, savedAt: Date.now() };
+        }
+
+        function showError(msg) {
+            document.getElementById('loader').style.display = 'none';
+            const panel = document.getElementById('error-panel');
+            document.getElementById('error-panel-text').textContent = msg;
+            panel.style.display = 'block';
+        }
+
+        function processFamilyData(rawData) {
+            const people = new Map();
+
+            rawData.forEach(row => {
+                const name = row['Nome(s)']?.trim();
+                const type = row['Tipo']?.trim();
+                const spouse = row['Agregado']?.trim();
+                const father = row['Pai']?.trim();
+                const mother = row['Mãe']?.trim();
+
+                if (!name) return;
+
+                let parentsLine = '';
+                if (father && mother) parentsLine = 'Filho(a) de: ' + father + ' · ' + mother;
+                else if (father) parentsLine = 'Filho(a) de: ' + father;
+                else if (mother) parentsLine = 'Filho(a) de: ' + mother;
+
+                const primaryParent = father || mother;
+
+                if (!people.has(name)) {
+                    people.set(name, {
+                        id: name,
+                        name: name,
+                        type: type || 'Membro',
+                        spouse: spouse || '',
+                        parentId: null,
+                        parentsLine: parentsLine || ''
+                    });
+                } else {
+                    const p = people.get(name);
+                    if (type) p.type = type;
+                    if (spouse) p.spouse = spouse;
+                    if (parentsLine) p.parentsLine = parentsLine;
+                }
+
+                if (spouse) {
+                    if (!people.has(spouse)) {
+                        people.set(spouse, {
+                            id: spouse,
+                            name: spouse,
+                            type: 'Agregado',
+                            spouse: name,
+                            parentId: null,
+                            parentsLine: ''
+                        });
+                    }
+                }
+
+                if (primaryParent) {
+                    people.get(name).parentId = primaryParent;
+                    if (!people.has(primaryParent)) {
+                        people.set(primaryParent, {
+                            id: primaryParent,
+                            name: primaryParent,
+                            type: 'Ancestral',
+                            spouse: '',
+                            parentId: null,
+                            parentsLine: ''
+                        });
+                    }
+                }
+            });
+
+            const root1 = 'Hélio Marques';
+            const root2 = 'Celina Marques';
+
+            if (people.has(root1) && people.has(root2)) {
+                people.forEach(p => {
+                    if (p.parentId === root2) p.parentId = root1;
+                });
+                people.get(root1).spouse = root2;
+            }
+
+            const genealogyReport = buildGenealogyAnalysis(people, rawData, root1, root2);
+
+            const virtualRootId = 'FAMILIA_ROOT';
+            const chartData = [{
+                id: virtualRootId,
+                name: 'Família Marques',
+                type: 'Raiz',
+                spouse: '',
+                parentId: null,
+                parentsLine: ''
+            }];
+
+            const spousesToHide = new Set();
+
+            people.forEach(p => {
+                if (!p.parentId) p.parentId = virtualRootId;
+            });
+
+            people.forEach(p => {
+                const partner = p.spouse;
+                if (!partner || !people.has(partner)) return;
+
+                if (
+                    (p.name === root1 && partner === root2) ||
+                    (p.name === root2 && partner === root1)
+                ) {
+                    spousesToHide.add(root2);
+                    people.get(root1).spouse = root2;
+                    return;
+                }
+
+                const pHasParents = p.parentId !== virtualRootId;
+                const partnerHasParents = people.get(partner).parentId !== virtualRootId;
+                const tipoP = (p.type || '').trim().toLowerCase();
+                const tipoPar = (people.get(partner).type || '').trim().toLowerCase();
+
+                if (partnerHasParents && !pHasParents) {
+                    spousesToHide.add(p.name);
+                    return;
+                }
+                if (p.name === root1) {
+                    spousesToHide.add(partner);
+                    p.spouse = partner;
+                    return;
+                }
+                if (pHasParents && !partnerHasParents) {
+                    spousesToHide.add(partner);
+                    p.spouse = partner;
+                    return;
+                }
+                if (pHasParents && partnerHasParents) {
+                    if (tipoP === 'agregado' && tipoPar !== 'agregado') {
+                        spousesToHide.add(p.name);
+                    } else if (tipoPar === 'agregado' && tipoP !== 'agregado') {
+                        spousesToHide.add(partner);
+                        p.spouse = partner;
+                    } else if (p.name.localeCompare(partner) < 0) {
+                        spousesToHide.add(partner);
+                        p.spouse = partner;
+                    } else {
+                        spousesToHide.add(p.name);
+                    }
+                    return;
+                }
+                if (!spousesToHide.has(p.name) && !spousesToHide.has(partner)) {
+                    spousesToHide.add(partner);
+                    p.spouse = partner;
+                }
+            });
+
+            // Quem é referenciado como pai/mãe na árvore precisa existir como nó. Se estiver
+            // só em spousesToHide, o d3-org-chart quebra com "missing: <nome>".
+            const neededAsParent = new Set();
+            people.forEach(p => {
+                if (p.parentId && p.parentId !== virtualRootId) neededAsParent.add(p.parentId);
+            });
+            neededAsParent.forEach(id => { spousesToHide.delete(id); });
+
+            people.forEach(p => {
+                if (!spousesToHide.has(p.name)) chartData.push(p);
+            });
+
+            const idsInChart = new Set(chartData.map(n => n.id));
+            for (let i = 1; i < chartData.length; i++) {
+                const n = chartData[i];
+                if (n.parentId && !idsInChart.has(n.parentId)) {
+                    n.parentId = virtualRootId;
+                }
+            }
+
+            return { chartData, genealogyReport };
+        }
+
+        const VIRTUAL_ROOT_ID = 'FAMILIA_ROOT';
+
+        function hashHue(str) {
+            let h = 216;
+            const s = String(str || '');
+            for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
+            return Math.abs(h) % 360;
+        }
+
+        /** Profundidade na árvore (0 = raiz virtual). Usada para tamanho e contraste entre gerações. */
+        function depthFromVirtualRoot(id, byId, virtualRootId) {
+            if (id === virtualRootId) return 0;
+            let depth = 0;
+            let cur = id;
+            const seen = new Set();
+            while (cur !== virtualRootId) {
+                if (seen.has(cur)) break;
+                seen.add(cur);
+                const n = byId.get(cur);
+                if (!n || !n.parentId) break;
+                cur = n.parentId;
+                depth++;
+            }
+            return depth;
+        }
+
+        /** Ramo = qual filho(a) direto(a) de Hélio está acima desta pessoa (uma “família” por cor). */
+        function branchKeyUnderHelio(id, byId, virtualRootId, helioId) {
+            if (id === virtualRootId) return '__raiz__';
+            if (id === helioId || id === FOUNDERS.celina) return '__fundadores__';
+            let cur = id;
+            const seen = new Set();
+            for (let i = 0; i < 120; i++) {
+                if (seen.has(cur)) return '__ciclo__';
+                seen.add(cur);
+                const n = byId.get(cur);
+                if (!n || !n.parentId) return '__sem_pai__';
+                if (n.parentId === helioId) return cur;
+                if (n.parentId === virtualRootId) {
+                    if (cur === helioId) return '__fundadores__';
+                    return '__direto_raiz_' + cur;
+                }
+                cur = n.parentId;
+            }
+            return '__desconhecido__';
+        }
+
+        function annotateVisualizationMeta(chartData) {
+            const byId = new Map(chartData.map(n => [n.id, n]));
+            const helioId = FOUNDERS.helio;
+
+            chartData.forEach(n => {
+                n._depth = depthFromVirtualRoot(n.id, byId, VIRTUAL_ROOT_ID);
+                n._branchKey = branchKeyUnderHelio(n.id, byId, VIRTUAL_ROOT_ID, helioId);
+            });
+
+            const branchInheritBad = new Set(['__sem_pai__', '__desconhecido__', '__ciclo__']);
+            chartData.forEach(n => {
+                if (branchInheritBad.has(n._branchKey) && n.spouse) {
+                    const p = byId.get(n.spouse);
+                    if (p && p._branchKey && !branchInheritBad.has(p._branchKey)) {
+                        n._branchKey = p._branchKey;
+                    }
+                }
+            });
+
+            chartData.forEach(n => {
+                const d = n._depth;
+                const key = String(n._branchKey);
+
+                if (n.id === VIRTUAL_ROOT_ID) {
+                    n._cardBg = 'linear-gradient(145deg, #1b2838 0%, #2c4562 55%, #3d5a80 100%)';
+                    n._cardBorder = '#1a2332';
+                    n._nameColor = '#f8fafc';
+                    n._roleColor = 'rgba(248,250,252,0.78)';
+                    n._parentsColor = 'rgba(248,250,252,0.72)';
+                    n._spouseColor = '#fde68a';
+                    n._nameSizePx = 17;
+                    n._linkStroke = '#64748b';
+                    return;
+                }
+
+                if (n.id === helioId || n.id === FOUNDERS.celina || key === '__fundadores__') {
+                    n._cardBg = 'linear-gradient(160deg, #0f172a 0%, #1e3a5f 45%, #1e40af 100%)';
+                    n._cardBorder = '#0c1422';
+                    n._nameColor = '#f1f5f9';
+                    n._roleColor = 'rgba(241,245,249,0.82)';
+                    n._parentsColor = 'rgba(226,232,240,0.88)';
+                    n._spouseColor = '#fde047';
+                    n._nameSizePx = 16;
+                    n._linkStroke = '#475569';
+                    return;
+                }
+
+                const hue = hashHue(key);
+                const L = Math.max(72, 95 - d * 3.2);
+                const S = Math.min(48, 26 + Math.min(d, 6) * 3.2);
+                n._cardBg = `hsl(${hue} ${S}% ${L}%)`;
+                n._cardBorder = `hsl(${hue} 38% ${Math.max(24, 52 - d * 2.5)}%)`;
+                n._nameColor = `hsl(${hue} 26% ${Math.max(10, 20 - d * 0.8)}%)`;
+                n._roleColor = `hsl(${hue} 20% 32%)`;
+                n._parentsColor = `hsl(${hue} 16% 34%)`;
+                n._spouseColor = `hsl(${(hue + 38) % 360} 42% 36%)`;
+                n._linkStroke = `hsla(${hue}, 36%, 48%, 0.82)`;
+                n._nameSizePx = Math.max(11.5, 14.2 - d * 0.55);
+            });
+        }
+
+        function filterBranchSubset(fullData, branchKey) {
+            if (!branchKey || !fullData.length) return fullData;
+            const byId = new Map(fullData.map(n => [n.id, n]));
+            const keep = new Set();
+            fullData.forEach(n => {
+                if (n._branchKey === branchKey || n.id === branchKey) keep.add(n.id);
+            });
+            let more = true;
+            while (more) {
+                more = false;
+                keep.forEach(id => {
+                    const n = byId.get(id);
+                    if (n && n.parentId && !keep.has(n.parentId)) {
+                        keep.add(n.parentId);
+                        more = true;
+                    }
+                });
+            }
+            return fullData.filter(n => keep.has(n.id));
+        }
+
+        function getViewData() {
+            const base = focusedBranchKey
+                ? filterBranchSubset(fullChartData, focusedBranchKey)
+                : fullChartData;
+            return base.map(n => Object.assign({}, n));
+        }
+
+        function getBranchDockEntries(data) {
+            const helio = FOUNDERS.helio;
+            const out = [];
+            const seen = new Set();
+            const seenEdge = new Set();
+            data.forEach(n => {
+                if (n.parentId === helio && n.id !== helio) {
+                    if (!seen.has(n.id)) {
+                        seen.add(n.id);
+                        out.push({ key: n.id, label: n.name, dim: false });
+                    }
+                }
+            });
+            data.forEach(n => {
+                const k = String(n._branchKey || '');
+                if (k.startsWith('__direto_raiz_') && !seenEdge.has(k)) {
+                    seenEdge.add(k);
+                    const tail = k.slice('__direto_raiz_'.length);
+                    out.push({ key: k, label: tail + ' (ligado à raiz)', dim: true });
+                }
+            });
+            out.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+            return out;
+        }
+
+        function refreshBranchDockList() {
+            const el = document.getElementById('branch-dock-list');
+            if (!el || !fullChartData.length) {
+                if (el) el.innerHTML = '';
+                return;
+            }
+            const entries = getBranchDockEntries(fullChartData);
+            el.innerHTML = entries
+                .map(
+                    e =>
+                        '<button type="button" class="branch-chip' +
+                        (e.dim ? ' dim' : '') +
+                        '" data-branch="' +
+                        encodeURIComponent(e.key) +
+                        '" onclick="branchDockChipClick(this)">' +
+                        escapeHtml(e.label) +
+                        '</button>'
+                )
+                .join('');
+            refreshBranchDockActive();
+        }
+
+        function refreshBranchDockActive() {
+            document.querySelectorAll('#branch-dock-list .branch-chip').forEach(b => {
+                const enc = b.getAttribute('data-branch');
+                const val = enc ? decodeURIComponent(enc) : '';
+                const act = focusedBranchKey ? val === focusedBranchKey : false;
+                b.classList.toggle('active', act);
+            });
+        }
+
+        let branchDockInteractionInited = false;
+
+        function initBranchDockInteraction() {
+            if (branchDockInteractionInited) return;
+            branchDockInteractionInited = true;
+
+            const dock = document.getElementById('branch-dock');
+            const handle = document.getElementById('branch-dock-drag-handle');
+            const chartEl = document.getElementById('chart-container');
+
+            let pos = { left: 14, top: 92 };
+            try {
+                const s = localStorage.getItem(BRANCH_DOCK_POS_KEY);
+                if (s) Object.assign(pos, JSON.parse(s));
+            } catch (e) {}
+
+            function applyPos() {
+                pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - dock.offsetWidth - 8));
+                pos.top = Math.max(72, Math.min(pos.top, window.innerHeight - 80));
+                dock.style.left = pos.left + 'px';
+                dock.style.top = pos.top + 'px';
+            }
+            applyPos();
+            window.addEventListener('resize', applyPos);
+
+            let drag = null;
+            function down(clientX, clientY) {
+                drag = { x: clientX - pos.left, y: clientY - pos.top };
+            }
+            function move(clientX, clientY) {
+                if (!drag) return;
+                pos.left = clientX - drag.x;
+                pos.top = clientY - drag.y;
+                applyPos();
+            }
+            function up() {
+                if (!drag) return;
+                drag = null;
+                try {
+                    localStorage.setItem(BRANCH_DOCK_POS_KEY, JSON.stringify(pos));
+                } catch (e) {}
+            }
+
+            handle.addEventListener('mousedown', e => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                down(e.clientX, e.clientY);
+            });
+            window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+            window.addEventListener('mouseup', up);
+
+            handle.addEventListener(
+                'touchstart',
+                e => {
+                    const t = e.touches[0];
+                    down(t.clientX, t.clientY);
+                },
+                { passive: true }
+            );
+            window.addEventListener(
+                'touchmove',
+                e => {
+                    if (!drag) return;
+                    const t = e.touches[0];
+                    move(t.clientX, t.clientY);
+                },
+                { passive: true }
+            );
+            window.addEventListener('touchend', up);
+
+            chartEl.addEventListener('click', function chartBranchDelegate(ev) {
+                const t = ev.target.closest('[data-branch-focus]');
+                if (!t) return;
+                const enc = t.getAttribute('data-branch-focus');
+                if (enc == null || enc === '') return;
+                try {
+                    ev.stopPropagation();
+                    setFamilyBranchFocus(decodeURIComponent(enc));
+                } catch (err) {}
+            });
+        }
+
+        window.branchDockChipClick = function (btn) {
+            const enc = btn.getAttribute('data-branch');
+            setFamilyBranchFocus(enc ? decodeURIComponent(enc) : null);
+        };
+
+        window.setFamilyBranchFocus = function (branchKey) {
+            focusedBranchKey = branchKey && String(branchKey).length ? String(branchKey) : null;
+            refreshBranchDockActive();
+            renderChart(getViewData());
+        };
+
+        function renderChart(data) {
+            annotateVisualizationMeta(data);
+
+            const zoomedBranch = !!focusedBranchKey;
+            const m = zoomedBranch ? 1.45 : 1;
+
+            chart = new d3.OrgChart()
+                .container('#chart-container')
+                .compact(false)
+                .scaleExtent([0.05, 5])
+                .data(data)
+                .duration(zoomedBranch ? 200 : 400)
+                .nodeWidth(d => {
+                    const depth = d.data._depth != null ? d.data._depth : 0;
+                    return Math.max(158, Math.round((236 - depth * 14) * (zoomedBranch ? 1.08 : 1)));
+                })
+                .nodeHeight(d => {
+                    const depth = d.data._depth != null ? d.data._depth : 0;
+                    return Math.max(68, Math.round((124 - depth * 9) * (zoomedBranch ? 1.06 : 1)));
+                })
+                .childrenMargin(() => Math.round(56 * m))
+                .compactMarginBetween(() => Math.round(40 * m))
+                .compactMarginPair(() => Math.round(34 * m))
+                .neighbourMargin(() => Math.round(22 * m))
+                .linkUpdate(function (d) {
+                    const stroke = d && d.data && d.data._linkStroke ? d.data._linkStroke : '#94a3b8';
+                    d3.select(this)
+                        .attr('stroke', stroke)
+                        .attr('stroke-width', 2)
+                        .attr('opacity', 0.88);
+                })
+                .nodeContent(function (d) {
+                    const isRoot = d.data.id === VIRTUAL_ROOT_ID;
+                    const bk = d.data._branchKey;
+                    const bkStr = String(bk || '');
+                    const canFocus =
+                        !isRoot &&
+                        bk &&
+                        bkStr !== '__raiz__' &&
+                        bkStr !== '__fundadores__' &&
+                        !bkStr.startsWith('__ciclo__') &&
+                        !bkStr.startsWith('__sem_pai__') &&
+                        !bkStr.startsWith('__desconhecido__') &&
+                        d.data.id !== FOUNDERS.helio &&
+                        d.data.id !== FOUNDERS.celina;
+                    const dataFocus = canFocus
+                        ? ' data-branch-focus="' + encodeURIComponent(String(bk)) + '"'
+                        : '';
+                    const focusCls = canFocus ? ' node-card--focusable' : '';
+                    const focusHint = canFocus
+                        ? '<div class="node-focus-hint" style="color:' +
+                          (d.data._roleColor || '#64748b') +
+                          '">Toque: só este ramo</div>'
+                        : '';
+                    const spouse = d.data.spouse
+                        ? `<div class="node-spouse" style="color:${d.data._spouseColor || '#92400e'}">❤️ ${d.data.spouse}</div>`
+                        : '';
+                    const parents =
+                        !isRoot && d.data.parentsLine
+                            ? `<div class="node-parents" style="color:${d.data._parentsColor || '#64748b'}">${d.data.parentsLine}</div>`
+                            : '';
+                    const bg = d.data._cardBg || '#fff';
+                    const border = d.data._cardBorder || '#cbd5e1';
+                    const nc = d.data._nameColor || '#0f172a';
+                    const rc = d.data._roleColor || '#64748b';
+                    const ns = (d.data._nameSizePx || 13) + 'px';
+                    return `
+                        <div class="node-card${focusCls}" style="background:${bg};border-color:${border};"${dataFocus}>
+                            <div class="node-role" style="color:${rc}">${d.data.type}</div>
+                            <div class="node-name" style="color:${nc};font-size:${ns}">${d.data.name}</div>
+                            ${parents}
+                            ${spouse}
+                            ${focusHint}
+                        </div>
+                    `;
+                })
+                .render();
+
+            chart.expandAll().fit();
+        }
+
+        function parseAndRender(csvText, fromCache, savedAt) {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: 'greedy',
+                complete(results) {
+                    const { chartData, genealogyReport } = processFamilyData(results.data);
+                    lastGenealogyReport = genealogyReport;
+                    fullChartData = chartData.map(n => Object.assign({}, n));
+                    annotateVisualizationMeta(fullChartData);
+                    focusedBranchKey = null;
+                    initBranchDockInteraction();
+                    refreshBranchDockList();
+                    renderChart(getViewData());
+                    setStatus(fromCache, savedAt);
+                    document.getElementById('loader').style.display = 'none';
+                },
+                error(err) {
+                    showError('Erro ao interpretar CSV: ' + (err && err.message ? err.message : String(err)));
+                }
+            });
+        }
+
+        async function boot(forceNetwork) {
+            const loaderMsg = document.getElementById('loader-msg');
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                if (forceNetwork) {
+                    loaderMsg.textContent = 'Buscando dados frescos na planilha…';
+                    clearCache();
+                } else {
+                    loaderMsg.textContent = 'Carregando (cache ou planilha)…';
+                }
+                const { text, fromCache, savedAt } = await getCsvText(forceNetwork);
+                parseAndRender(text, fromCache, savedAt);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loader').style.display = 'none';
+                if (window.location.protocol === 'file:') {
+                    document.getElementById('cors-warning').style.display = 'block';
+                } else {
+                    showError(
+                        'Não foi possível ler a planilha. Confirme que o documento está com ' +
+                        '“qualquer pessoa com o link pode ver” e tente “Atualizar da planilha”. ' +
+                        'Detalhes: ' + (err && err.message ? err.message : String(err))
+                    );
+                }
+            }
+        }
+
+        function fitChart() {
+            if (chart && typeof chart.fit === 'function') chart.fit();
+        }
+
+        function exportChartImg() {
+            if (chart && typeof chart.exportImg === 'function') chart.exportImg();
+        }
+
+        function refreshFromSheet() {
+            boot(true);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('sheet-link').href = SHEET_EDIT_URL;
+            boot(false);
+        });
+    </script>
+</body>
+</html>
