@@ -136,6 +136,40 @@
             transform: translateY(-1px);
         }
 
+        .sheet-source {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.35rem 0.45rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            min-width: min(420px, 100%);
+        }
+
+        .sheet-url-input {
+            flex: 1 1 260px;
+            min-width: 170px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.65rem;
+            font: inherit;
+            font-size: 0.82rem;
+            color: var(--text);
+        }
+
+        .sheet-url-input:focus {
+            outline: 2px solid rgba(61, 90, 128, 0.22);
+            outline-offset: 1px;
+        }
+
+        .sheet-source button {
+            padding: 0.48rem 0.78rem;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
         #chart-container {
             flex: 1;
             width: 100%;
@@ -402,6 +436,14 @@
         @media (max-width: 720px) {
             header { flex-direction: column; align-items: stretch; }
             .controls { justify-content: center; }
+            .sheet-source {
+                width: 100%;
+                min-width: 0;
+            }
+            .sheet-url-input {
+                min-width: 0;
+                font-size: 0.9rem;
+            }
             .branch-combobox {
                 width: 100%;
                 justify-content: space-between;
@@ -420,7 +462,7 @@
     <header>
         <div class="brand">
             <h1>Árvore genealógica</h1>
-            <p class="subtitle">Organograma da família a partir da planilha oficial. <strong>Pan:</strong> arraste o fundo vazio; <strong>zoom:</strong> roda do mouse ou pinça no celular. Use o filtro <strong>Ramos</strong> ou toque num cartão para ver só uma família.</p>
+            <p class="subtitle">Role o Mouse ou pince para dar zoom.</p>
             <span id="data-status" class="status"></span>
             <p class="legend-hint">Cada <strong>cor</strong> segue o ramo de um filho(a) direto(a) de Hélio; tons mais escuros nos nomes = mais fundo na linha. Cartões <strong>menores</strong> = gerações mais novas (bisneto, tataraneto).</p>
         </div>
@@ -431,6 +473,17 @@
             <button type="button" class="secondary" onclick="refreshFromSheet()" title="Ignora o cache e lê a planilha de novo">Atualizar da planilha</button>
             <button type="button" class="secondary" onclick="openGenealogyAnalysis()">Análise da planilha</button>
             <a class="btn-link" id="sheet-link" href="#" target="_blank" rel="noopener">Abrir planilha</a>
+            <div class="sheet-source" aria-label="Fonte da planilha">
+                <input
+                    id="sheet-url-input"
+                    class="sheet-url-input"
+                    type="text"
+                    placeholder="Cole aqui a URL da planilha Google"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button type="button" class="secondary" onclick="applySheetFromInput()">Usar planilha</button>
+            </div>
             <div class="branch-combobox" aria-label="Filtro por ramo">
                 <span class="branch-combobox-label">Ramos</span>
                 <select id="branch-dock-select" class="branch-dock-select" onchange="branchDockSelectChange(this)">
@@ -471,14 +524,66 @@
     <div id="chart-container"></div>
 
     <script>
-        const SHEET_ID = '13PqSDZ4y3UePTXLc3sLHiGLcsNyLMSf28uwBzeeNAoA';
-        const SHEET_GID = '0';
-        const SHEET_EDIT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SHEET_GID}#gid=${SHEET_GID}`;
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
-
-        const CACHE_KEY = 'arvoregenealogica_sheet_csv_v1';
-        const CACHE_META_KEY = 'arvoregenealogica_sheet_csv_meta_v1';
+        const DEFAULT_SHEET_ID = '13PqSDZ4y3UePTXLc3sLHiGLcsNyLMSf28uwBzeeNAoA';
+        const DEFAULT_SHEET_GID = '0';
+        const CACHE_KEY_PREFIX = 'arvoregenealogica_sheet_csv_v1';
+        const CACHE_META_KEY_PREFIX = 'arvoregenealogica_sheet_csv_meta_v1';
         const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+        let currentSheet = { id: DEFAULT_SHEET_ID, gid: DEFAULT_SHEET_GID };
+
+        function buildSheetEditUrl(id, gid) {
+            return `https://docs.google.com/spreadsheets/d/${id}/edit?gid=${gid}#gid=${gid}`;
+        }
+
+        function buildSheetCsvUrl(id, gid) {
+            return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+        }
+
+        function getSheetEditUrl() {
+            return buildSheetEditUrl(currentSheet.id, currentSheet.gid);
+        }
+
+        function getSheetCsvUrl() {
+            return buildSheetCsvUrl(currentSheet.id, currentSheet.gid);
+        }
+
+        function getCacheKey() {
+            return `${CACHE_KEY_PREFIX}_${currentSheet.id}_${currentSheet.gid}`;
+        }
+
+        function getCacheMetaKey() {
+            return `${CACHE_META_KEY_PREFIX}_${currentSheet.id}_${currentSheet.gid}`;
+        }
+
+        function parseSheetInput(value) {
+            const raw = (value || '').trim();
+            if (!raw) return null;
+
+            const idOnly = raw.match(/^[a-zA-Z0-9-_]{20,}$/);
+            if (idOnly) {
+                return { id: raw, gid: DEFAULT_SHEET_GID };
+            }
+
+            try {
+                const url = new URL(raw);
+                const m = url.pathname.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                if (!m || !m[1]) return null;
+                const gidFromQuery = url.searchParams.get('gid');
+                const hash = (url.hash || '').replace('#', '');
+                const gidFromHash = (hash.match(/(?:^|&)gid=([0-9]+)/) || [])[1];
+                const gid = gidFromQuery || gidFromHash || DEFAULT_SHEET_GID;
+                return { id: m[1], gid };
+            } catch {
+                return null;
+            }
+        }
+
+        function syncSheetSourceUi() {
+            const link = document.getElementById('sheet-link');
+            if (link) link.href = getSheetEditUrl();
+            const input = document.getElementById('sheet-url-input');
+            if (input) input.value = getSheetEditUrl();
+        }
 
         /**
          * Ordem genealógica em memória: descendentes de Hélio Marques e Celina Marques.
@@ -524,6 +629,11 @@
         ]);
 
         const FOUNDERS = Object.freeze({ helio: 'Hélio Marques', celina: 'Celina Marques' });
+        const FORCED_PAIR_DISPLAY_RULES = Object.freeze([
+            { primaryToken: 'lucio', secondaryToken: 'regina' },
+            { primaryToken: 'gilson', secondaryToken: 'sheila' },
+            { primaryToken: 'eduardo', secondaryToken: 'cecilia' }
+        ]);
 
         let chart;
         let lastGenealogyReport = null;
@@ -532,6 +642,25 @@
         function normalizeTipoKey(s) {
             if (!s || typeof s !== 'string') return '';
             return s.trim().normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+        }
+
+        function normalizeNameToken(s) {
+            if (!s || typeof s !== 'string') return '';
+            return s.trim().normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+        }
+
+        function getForcedPairPrimaryName(aName, bName) {
+            const a = normalizeNameToken(aName);
+            const b = normalizeNameToken(bName);
+            for (const rule of FORCED_PAIR_DISPLAY_RULES) {
+                const aPrimary = a.includes(rule.primaryToken);
+                const bPrimary = b.includes(rule.primaryToken);
+                const aSecondary = a.includes(rule.secondaryToken);
+                const bSecondary = b.includes(rule.secondaryToken);
+                if (aPrimary && bSecondary) return aName;
+                if (bPrimary && aSecondary) return bName;
+            }
+            return null;
         }
 
         function rankFromDeclaredTipo(tipoRaw) {
@@ -701,8 +830,8 @@
 
         function readCache() {
             try {
-                const meta = JSON.parse(localStorage.getItem(CACHE_META_KEY) || 'null');
-                const text = localStorage.getItem(CACHE_KEY);
+                const meta = JSON.parse(localStorage.getItem(getCacheMetaKey()) || 'null');
+                const text = localStorage.getItem(getCacheKey());
                 if (!meta || typeof meta.t !== 'number' || !text) return null;
                 if (Date.now() - meta.t > CACHE_TTL_MS) return null;
                 return { text, savedAt: meta.t };
@@ -712,13 +841,13 @@
         }
 
         function writeCache(text) {
-            localStorage.setItem(CACHE_KEY, text);
-            localStorage.setItem(CACHE_META_KEY, JSON.stringify({ t: Date.now() }));
+            localStorage.setItem(getCacheKey(), text);
+            localStorage.setItem(getCacheMetaKey(), JSON.stringify({ t: Date.now() }));
         }
 
         function clearCache() {
-            localStorage.removeItem(CACHE_KEY);
-            localStorage.removeItem(CACHE_META_KEY);
+            localStorage.removeItem(getCacheKey());
+            localStorage.removeItem(getCacheMetaKey());
         }
 
         function formatAgo(ts) {
@@ -742,7 +871,7 @@
         }
 
         async function fetchCsvFromNetwork() {
-            const response = await fetch(CSV_URL, { cache: 'no-store' });
+            const response = await fetch(getSheetCsvUrl(), { cache: 'no-store' });
             if (!response.ok) throw new Error('Resposta HTTP ' + response.status);
             return await response.text();
         }
@@ -766,13 +895,29 @@
 
         function processFamilyData(rawData) {
             const people = new Map();
+            const canonicalByNorm = new Map();
 
             rawData.forEach(row => {
-                const name = row['Nome(s)']?.trim();
+                const rawName = row['Nome(s)']?.trim();
+                if (!rawName) return;
+                const norm = normalizeNameToken(rawName);
+                if (!norm) return;
+                if (!canonicalByNorm.has(norm)) canonicalByNorm.set(norm, rawName);
+            });
+
+            function canonicalizeName(raw) {
+                const txt = (raw || '').trim();
+                if (!txt) return '';
+                const norm = normalizeNameToken(txt);
+                return canonicalByNorm.get(norm) || txt;
+            }
+
+            rawData.forEach(row => {
+                const name = canonicalizeName(row['Nome(s)']);
                 const type = row['Tipo']?.trim();
-                const spouse = row['Agregado']?.trim();
-                const father = row['Pai']?.trim();
-                const mother = row['Mãe']?.trim();
+                const spouse = canonicalizeName(row['Agregado']);
+                const father = canonicalizeName(row['Pai']);
+                const mother = canonicalizeName(row['Mãe']);
 
                 if (!name) return;
 
@@ -888,6 +1033,24 @@
                     return;
                 }
                 if (pHasParents && partnerHasParents) {
+                    const forcedPrimary = getForcedPairPrimaryName(p.name, partner);
+                    if (forcedPrimary) {
+                        const hidden = forcedPrimary === p.name ? partner : p.name;
+                        spousesToHide.add(hidden);
+                        const mainNode = people.get(forcedPrimary);
+                        if (mainNode) mainNode.spouse = hidden;
+                        return;
+                    }
+
+                    // Quando ambos têm pai/mãe na árvore e nenhum é Agregado,
+                    // manter os dois como nós independentes evita "duplicar" pessoa
+                    // (um nó próprio + nome no campo de cônjuge de outro nó).
+                    if (tipoP !== 'agregado' && tipoPar !== 'agregado') {
+                        if (p.spouse === partner) p.spouse = '';
+                        const partnerNode = people.get(partner);
+                        if (partnerNode && partnerNode.spouse === p.name) partnerNode.spouse = '';
+                        return;
+                    }
                     if (tipoP === 'agregado' && tipoPar !== 'agregado') {
                         spousesToHide.add(p.name);
                     } else if (tipoPar === 'agregado' && tipoP !== 'agregado') {
@@ -1069,16 +1232,54 @@
         function getBranchDockEntries(data) {
             const helio = FOUNDERS.helio;
             const out = [];
-            const seen = new Set();
             const seenEdge = new Set();
+            const byId = new Map(data.map(n => [n.id, n]));
+            const childrenByParent = new Map();
             data.forEach(n => {
-                if (n.parentId === helio && n.id !== helio) {
-                    if (!seen.has(n.id)) {
-                        seen.add(n.id);
-                        out.push({ key: n.id, label: n.name, dim: false });
-                    }
-                }
+                if (!n.parentId) return;
+                if (!childrenByParent.has(n.parentId)) childrenByParent.set(n.parentId, []);
+                childrenByParent.get(n.parentId).push(n.id);
             });
+
+            function countDescendants(rootId) {
+                let count = 0;
+                const stack = [...(childrenByParent.get(rootId) || [])];
+                while (stack.length) {
+                    const cur = stack.pop();
+                    count += 1;
+                    const kids = childrenByParent.get(cur);
+                    if (kids && kids.length) stack.push(...kids);
+                }
+                return count;
+            }
+
+            function chooseRepresentative(a, b) {
+                const da = countDescendants(a.id);
+                const db = countDescendants(b.id);
+                if (da !== db) return da > db ? a : b;
+                const ta = normalizeTipoKey(a.type);
+                const tb = normalizeTipoKey(b.type);
+                if (ta === 'agregado' && tb !== 'agregado') return b;
+                if (tb === 'agregado' && ta !== 'agregado') return a;
+                return a.name.localeCompare(b.name, 'pt-BR') <= 0 ? a : b;
+            }
+
+            const processedPairs = new Set();
+            data.forEach(n => {
+                if (n.parentId !== helio || n.id === helio) return;
+                const partner = n.spouse ? byId.get(n.spouse) : null;
+                const partnerIsSameLevel = !!(partner && partner.parentId === helio);
+                if (!partnerIsSameLevel) {
+                    out.push({ key: n.id, label: n.name, dim: false });
+                    return;
+                }
+                const pairKey = [n.id, partner.id].sort((x, y) => x.localeCompare(y, 'pt-BR')).join('::');
+                if (processedPairs.has(pairKey)) return;
+                processedPairs.add(pairKey);
+                const rep = chooseRepresentative(n, partner);
+                out.push({ key: rep.id, label: rep.name, dim: false });
+            });
+
             data.forEach(n => {
                 const k = String(n._branchKey || '');
                 if (k.startsWith('__direto_raiz_') && !seenEdge.has(k)) {
@@ -1297,8 +1498,33 @@
             boot(true);
         }
 
+        function applySheetFromInput() {
+            const input = document.getElementById('sheet-url-input');
+            if (!input) return;
+            const parsed = parseSheetInput(input.value);
+            if (!parsed) {
+                showError('URL da planilha inválida. Cole um link do Google Sheets (ou o ID da planilha).');
+                return;
+            }
+
+            currentSheet = parsed;
+            syncSheetSourceUi();
+            focusedBranchKey = null;
+            refreshBranchDockList();
+            refreshBranchDockActive();
+            boot(true);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('sheet-link').href = SHEET_EDIT_URL;
+            syncSheetSourceUi();
+            const input = document.getElementById('sheet-url-input');
+            if (input) {
+                input.addEventListener('keydown', ev => {
+                    if (ev.key !== 'Enter') return;
+                    ev.preventDefault();
+                    applySheetFromInput();
+                });
+            }
             boot(false);
         });
     </script>
