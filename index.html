@@ -338,95 +338,39 @@
 
         #analysis-backdrop.open { display: block; }
 
-        .branch-dock {
-            position: fixed;
-            z-index: 500;
-            width: min(280px, calc(100vw - 1.5rem));
-            max-height: min(72vh, 520px);
-            display: flex;
-            flex-direction: column;
-            background: rgba(255, 255, 255, 0.97);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: 0 12px 40px rgba(36, 59, 83, 0.18);
-            overscroll-behavior: contain;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-
-        .branch-dock-mobile-bar { display: none; }
-
-        .branch-dock-header {
-            padding: 0.65rem 0.85rem;
-            font-family: Cinzel, serif;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: var(--primary);
-            background: linear-gradient(180deg, #eef3f9 0%, #e4ebf4 100%);
-            border-radius: 12px 12px 0 0;
-            border-bottom: 1px solid var(--border);
-            cursor: grab;
-            display: flex;
+        .branch-combobox {
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
             gap: 0.35rem;
-            touch-action: none;
-            -webkit-tap-highlight-color: transparent;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.35rem 0.45rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         }
 
-        .branch-dock-header:active { cursor: grabbing; }
-
-        .branch-dock-drag-hint {
-            font-size: 0.65rem;
-            font-weight: 400;
-            color: var(--muted);
-            white-space: nowrap;
-        }
-
-        .branch-dock-body {
-            padding: 0.6rem 0.75rem 0.75rem;
-            overflow-y: auto;
-            flex: 1;
-            min-height: 0;
-            touch-action: pan-y;
-        }
-
-        .branch-dock-hint {
-            font-size: 0.68rem;
-            color: var(--muted);
-            line-height: 1.35;
-            margin-bottom: 0.5rem;
-        }
-
-        .branch-dock-mobile-label {
-            font-size: 0.72rem;
-            font-weight: 600;
+        .branch-combobox-label {
+            font-size: 0.78rem;
             color: var(--primary);
-            letter-spacing: 0.02em;
-        }
-
-        .branch-dock-mobile-controls {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
+            font-weight: 600;
+            white-space: nowrap;
         }
 
         .branch-dock-select {
             width: 100%;
-            min-width: 0;
+            min-width: 180px;
             appearance: none;
             -webkit-appearance: none;
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 0.75rem 2.4rem 0.75rem 0.85rem;
+            border-radius: 8px;
+            padding: 0.5rem 2rem 0.5rem 0.65rem;
             font: inherit;
-            font-size: 0.9rem;
+            font-size: 0.84rem;
             color: var(--text);
             background:
-                linear-gradient(45deg, transparent 50%, var(--primary-soft) 50%) calc(100% - 16px) calc(50% - 3px) / 6px 6px no-repeat,
-                linear-gradient(135deg, var(--primary-soft) 50%, transparent 50%) calc(100% - 11px) calc(50% - 3px) / 6px 6px no-repeat,
+                linear-gradient(45deg, transparent 50%, var(--primary-soft) 50%) calc(100% - 13px) calc(50% - 2px) / 5px 5px no-repeat,
+                linear-gradient(135deg, var(--primary-soft) 50%, transparent 50%) calc(100% - 9px) calc(50% - 2px) / 5px 5px no-repeat,
                 #fff;
-            box-shadow: 0 2px 8px rgba(36, 59, 83, 0.08);
         }
 
         .branch-dock-select:focus {
@@ -434,103 +378,12 @@
             outline-offset: 1px;
         }
 
-        .branch-dock-mobile-active {
-            font-size: 0.72rem;
-            color: var(--muted);
-            line-height: 1.35;
-        }
-
-        .branch-dock-mobile-active strong {
-            color: var(--primary);
-            font-weight: 600;
-        }
-
         .branch-dock-clear {
             flex: 0 0 auto;
-            padding: 0.7rem 0.85rem;
-            font-size: 0.78rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
             white-space: nowrap;
-        }
-
-        .branch-dock-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            max-height: 42vh;
-            overflow-y: auto;
-            touch-action: pan-y;
-        }
-
-        @media (max-width: 640px) {
-            .branch-dock {
-                left: 0.75rem !important;
-                right: 0.75rem;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
-                top: auto !important;
-                width: auto;
-                max-height: none;
-                border-radius: 16px;
-                background: rgba(255, 255, 255, 0.98);
-                box-shadow: 0 14px 34px rgba(36, 59, 83, 0.2);
-            }
-            .branch-dock-header {
-                display: none;
-            }
-            .branch-dock-body {
-                padding: 0.75rem;
-                overflow: visible;
-            }
-            .branch-dock-mobile-bar {
-                display: flex;
-                flex-direction: column;
-                gap: 0.45rem;
-            }
-            .branch-dock-hint,
-            .branch-dock-list {
-                display: none;
-            }
-            .branch-dock-mobile-controls {
-                align-items: stretch;
-            }
-            .branch-dock-select {
-                font-size: 1rem;
-                min-height: 46px;
-            }
-            .branch-dock-clear {
-                min-height: 46px;
-                padding-inline: 0.9rem;
-            }
-        }
-
-        .branch-chip {
-            display: block;
-            width: 100%;
-            text-align: left;
-            padding: 0.45rem 0.55rem;
             border-radius: 8px;
-            border: 1px solid var(--border);
-            background: #f8fafc;
-            font-family: Outfit, sans-serif;
-            font-size: 0.78rem;
-            cursor: pointer;
-            color: var(--text);
-            transition: background 0.15s ease, border-color 0.15s ease;
-        }
-
-        .branch-chip:hover {
-            background: #eef2f8;
-            border-color: var(--primary-soft);
-        }
-
-        .branch-chip.active {
-            background: #e0e7f1;
-            border-color: var(--primary);
-            font-weight: 600;
-        }
-
-        .branch-chip.dim {
-            font-size: 0.72rem;
-            color: var(--muted);
         }
 
         .node-card.node-card--focusable {
@@ -549,6 +402,15 @@
         @media (max-width: 720px) {
             header { flex-direction: column; align-items: stretch; }
             .controls { justify-content: center; }
+            .branch-combobox {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .branch-dock-select {
+                min-width: 0;
+                flex: 1 1 auto;
+                font-size: 0.92rem;
+            }
             h1 { font-size: 1.15rem; }
         }
     </style>
@@ -558,7 +420,7 @@
     <header>
         <div class="brand">
             <h1>Árvore genealógica</h1>
-            <p class="subtitle">Organograma da família a partir da planilha oficial. <strong>Pan:</strong> arraste o fundo vazio; <strong>zoom:</strong> roda do mouse ou pinça no celular. Use o painel <strong>Ramos</strong> ou toque num cartão para ver só uma família.</p>
+            <p class="subtitle">Organograma da família a partir da planilha oficial. <strong>Pan:</strong> arraste o fundo vazio; <strong>zoom:</strong> roda do mouse ou pinça no celular. Use o filtro <strong>Ramos</strong> ou toque num cartão para ver só uma família.</p>
             <span id="data-status" class="status"></span>
             <p class="legend-hint">Cada <strong>cor</strong> segue o ramo de um filho(a) direto(a) de Hélio; tons mais escuros nos nomes = mais fundo na linha. Cartões <strong>menores</strong> = gerações mais novas (bisneto, tataraneto).</p>
         </div>
@@ -569,6 +431,13 @@
             <button type="button" class="secondary" onclick="refreshFromSheet()" title="Ignora o cache e lê a planilha de novo">Atualizar da planilha</button>
             <button type="button" class="secondary" onclick="openGenealogyAnalysis()">Análise da planilha</button>
             <a class="btn-link" id="sheet-link" href="#" target="_blank" rel="noopener">Abrir planilha</a>
+            <div class="branch-combobox" aria-label="Filtro por ramo">
+                <span class="branch-combobox-label">Ramos</span>
+                <select id="branch-dock-select" class="branch-dock-select" onchange="branchDockSelectChange(this)">
+                    <option value="">Toda a família</option>
+                </select>
+                <button type="button" class="secondary branch-dock-clear" id="branch-dock-clear" onclick="setFamilyBranchFocus(null)">Limpar</button>
+            </div>
         </div>
     </header>
 
@@ -597,27 +466,6 @@
         <h3>Não foi possível carregar</h3>
         <p id="error-panel-text"></p>
         <button type="button" onclick="document.getElementById('error-panel').style.display='none'">Fechar</button>
-    </div>
-
-    <div id="branch-dock" class="branch-dock" aria-label="Seletor de ramos da família">
-        <div class="branch-dock-header" id="branch-dock-drag-handle">
-            <span>Ramos</span>
-            <span class="branch-dock-drag-hint" aria-hidden="true">⋮⋮ arrastar</span>
-        </div>
-        <div class="branch-dock-body">
-            <div class="branch-dock-mobile-bar">
-                <label class="branch-dock-mobile-label" for="branch-dock-select">Filtrar ramo</label>
-                <div class="branch-dock-mobile-controls">
-                    <select id="branch-dock-select" class="branch-dock-select" onchange="branchDockSelectChange(this)">
-                        <option value="">Toda a família</option>
-                    </select>
-                    <button type="button" class="secondary branch-dock-clear" id="branch-dock-clear" onclick="setFamilyBranchFocus(null)">Limpar</button>
-                </div>
-                <p class="branch-dock-mobile-active" id="branch-dock-mobile-active">Exibindo <strong>toda a família</strong>.</p>
-            </div>
-            <p class="branch-dock-hint">Toque num <strong>nome</strong> abaixo ou num <strong>cartão</strong> colorido na árvore para isolar aquele ramo. Use <strong>Enquadrar tudo</strong> para recentrar.</p>
-            <div id="branch-dock-list" class="branch-dock-list"></div>
-        </div>
     </div>
 
     <div id="chart-container"></div>
@@ -681,8 +529,6 @@
         let lastGenealogyReport = null;
         let fullChartData = [];
         let focusedBranchKey = null;
-        const BRANCH_DOCK_POS_KEY = 'arvoregenealogica_branch_dock_pos';
-
         function normalizeTipoKey(s) {
             if (!s || typeof s !== 'string') return '';
             return s.trim().normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -1246,26 +1092,12 @@
         }
 
         function refreshBranchDockList() {
-            const el = document.getElementById('branch-dock-list');
             const select = document.getElementById('branch-dock-select');
-            if (!el || !fullChartData.length) {
-                if (el) el.innerHTML = '';
+            if (!fullChartData.length) {
                 if (select) select.innerHTML = '<option value="">Toda a família</option>';
                 return;
             }
             const entries = getBranchDockEntries(fullChartData);
-            el.innerHTML = entries
-                .map(
-                    e =>
-                        '<button type="button" class="branch-chip' +
-                        (e.dim ? ' dim' : '') +
-                        '" data-branch="' +
-                        encodeURIComponent(e.key) +
-                        '" onclick="branchDockChipClick(this)">' +
-                        escapeHtml(e.label) +
-                        '</button>'
-                )
-                .join('');
             if (select) {
                 select.innerHTML =
                     '<option value="">Toda a família</option>' +
@@ -1284,24 +1116,9 @@
         }
 
         function refreshBranchDockActive() {
-            document.querySelectorAll('#branch-dock-list .branch-chip').forEach(b => {
-                const enc = b.getAttribute('data-branch');
-                const val = enc ? decodeURIComponent(enc) : '';
-                const act = focusedBranchKey ? val === focusedBranchKey : false;
-                b.classList.toggle('active', act);
-            });
             const select = document.getElementById('branch-dock-select');
             if (select) {
                 select.value = focusedBranchKey ? encodeURIComponent(focusedBranchKey) : '';
-            }
-            const status = document.getElementById('branch-dock-mobile-active');
-            if (status) {
-                const selectedLabel = (() => {
-                    if (!focusedBranchKey) return 'toda a família';
-                    const opt = select ? select.selectedOptions[0] : null;
-                    return opt && opt.textContent ? opt.textContent : focusedBranchKey;
-                })();
-                status.innerHTML = 'Exibindo <strong>' + escapeHtml(selectedLabel) + '</strong>.';
             }
             const clearBtn = document.getElementById('branch-dock-clear');
             if (clearBtn) clearBtn.disabled = !focusedBranchKey;
@@ -1313,85 +1130,7 @@
             if (branchDockInteractionInited) return;
             branchDockInteractionInited = true;
 
-            const dock = document.getElementById('branch-dock');
-            const handle = document.getElementById('branch-dock-drag-handle');
             const chartEl = document.getElementById('chart-container');
-
-            let pos = { left: 14, top: 92 };
-            try {
-                const s = localStorage.getItem(BRANCH_DOCK_POS_KEY);
-                if (s) Object.assign(pos, JSON.parse(s));
-            } catch (e) {}
-
-            function isCompactBranchDock() {
-                return window.matchMedia('(max-width: 640px)').matches;
-            }
-
-            function applyPos() {
-                if (isCompactBranchDock()) {
-                    dock.style.left = '';
-                    dock.style.top = '';
-                    return;
-                }
-                pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - dock.offsetWidth - 8));
-                pos.top = Math.max(72, Math.min(pos.top, window.innerHeight - 80));
-                dock.style.left = pos.left + 'px';
-                dock.style.top = pos.top + 'px';
-            }
-            applyPos();
-            window.addEventListener('resize', applyPos);
-
-            let drag = null;
-
-            function persistPos() {
-                try {
-                    localStorage.setItem(BRANCH_DOCK_POS_KEY, JSON.stringify(pos));
-                } catch (e) {}
-            }
-
-            function onPointerDown(e) {
-                if (isCompactBranchDock()) return;
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-                e.preventDefault();
-                try {
-                    handle.setPointerCapture(e.pointerId);
-                } catch (err) {}
-                drag = { x: e.clientX - pos.left, y: e.clientY - pos.top };
-            }
-
-            function onPointerMove(e) {
-                if (!drag) return;
-                if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
-                    drag = null;
-                    persistPos();
-                    return;
-                }
-                e.preventDefault();
-                pos.left = e.clientX - drag.x;
-                pos.top = e.clientY - drag.y;
-                applyPos();
-            }
-
-            function onPointerUp(e) {
-                if (!drag) return;
-                drag = null;
-                persistPos();
-                try {
-                    if (handle.hasPointerCapture(e.pointerId)) {
-                        handle.releasePointerCapture(e.pointerId);
-                    }
-                } catch (err) {}
-            }
-
-            handle.addEventListener('pointerdown', onPointerDown);
-            handle.addEventListener('pointermove', onPointerMove);
-            handle.addEventListener('pointerup', onPointerUp);
-            handle.addEventListener('pointercancel', onPointerUp);
-            handle.addEventListener('lostpointercapture', () => {
-                if (!drag) return;
-                drag = null;
-                persistPos();
-            });
 
             chartEl.addEventListener('click', function chartBranchDelegate(ev) {
                 const t = ev.target.closest('[data-branch-focus]');
@@ -1404,11 +1143,6 @@
                 } catch (err) {}
             });
         }
-
-        window.branchDockChipClick = function (btn) {
-            const enc = btn.getAttribute('data-branch');
-            setFamilyBranchFocus(enc ? decodeURIComponent(enc) : null);
-        };
 
         window.branchDockSelectChange = function (selectEl) {
             const enc = selectEl.value;
