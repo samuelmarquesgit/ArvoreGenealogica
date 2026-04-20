@@ -349,8 +349,9 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             box-shadow: 0 12px 40px rgba(36, 59, 83, 0.18);
-            touch-action: none;
+            overscroll-behavior: contain;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         .branch-dock-header {
@@ -367,15 +368,25 @@
             align-items: center;
             justify-content: space-between;
             gap: 0.35rem;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .branch-dock-header:active { cursor: grabbing; }
+
+        .branch-dock-drag-hint {
+            font-size: 0.65rem;
+            font-weight: 400;
+            color: var(--muted);
+            white-space: nowrap;
+        }
 
         .branch-dock-body {
             padding: 0.6rem 0.75rem 0.75rem;
             overflow-y: auto;
             flex: 1;
             min-height: 0;
+            touch-action: pan-y;
         }
 
         .branch-dock-hint {
@@ -391,6 +402,17 @@
             gap: 0.35rem;
             max-height: 42vh;
             overflow-y: auto;
+            touch-action: pan-y;
+        }
+
+        @media (max-width: 640px) {
+            .branch-dock-header {
+                min-height: 48px;
+                padding: 0.7rem 0.85rem;
+            }
+            .branch-dock-drag-hint {
+                font-size: 0.72rem;
+            }
         }
 
         .branch-chip {
@@ -493,7 +515,7 @@
     <div id="branch-dock" class="branch-dock" aria-label="Seletor de ramos da família">
         <div class="branch-dock-header" id="branch-dock-drag-handle">
             <span>Ramos</span>
-            <span style="font-size:0.65rem;font-weight:400;color:var(--muted);">⋮⋮ arrastar</span>
+            <span class="branch-dock-drag-hint" aria-hidden="true">⋮⋮ arrastar</span>
         </div>
         <div class="branch-dock-body">
             <p class="branch-dock-hint">Toque num <strong>nome</strong> abaixo ou num <strong>cartão</strong> colorido na árvore para isolar aquele ramo. Use <strong>Enquadrar tudo</strong> para recentrar.</p>
@@ -1183,49 +1205,55 @@
             window.addEventListener('resize', applyPos);
 
             let drag = null;
-            function down(clientX, clientY) {
-                drag = { x: clientX - pos.left, y: clientY - pos.top };
-            }
-            function move(clientX, clientY) {
-                if (!drag) return;
-                pos.left = clientX - drag.x;
-                pos.top = clientY - drag.y;
-                applyPos();
-            }
-            function up() {
-                if (!drag) return;
-                drag = null;
+
+            function persistPos() {
                 try {
                     localStorage.setItem(BRANCH_DOCK_POS_KEY, JSON.stringify(pos));
                 } catch (e) {}
             }
 
-            handle.addEventListener('mousedown', e => {
-                if (e.button !== 0) return;
+            function onPointerDown(e) {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
                 e.preventDefault();
-                down(e.clientX, e.clientY);
-            });
-            window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
-            window.addEventListener('mouseup', up);
+                try {
+                    handle.setPointerCapture(e.pointerId);
+                } catch (err) {}
+                drag = { x: e.clientX - pos.left, y: e.clientY - pos.top };
+            }
 
-            handle.addEventListener(
-                'touchstart',
-                e => {
-                    const t = e.touches[0];
-                    down(t.clientX, t.clientY);
-                },
-                { passive: true }
-            );
-            window.addEventListener(
-                'touchmove',
-                e => {
-                    if (!drag) return;
-                    const t = e.touches[0];
-                    move(t.clientX, t.clientY);
-                },
-                { passive: true }
-            );
-            window.addEventListener('touchend', up);
+            function onPointerMove(e) {
+                if (!drag) return;
+                if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
+                    drag = null;
+                    persistPos();
+                    return;
+                }
+                e.preventDefault();
+                pos.left = e.clientX - drag.x;
+                pos.top = e.clientY - drag.y;
+                applyPos();
+            }
+
+            function onPointerUp(e) {
+                if (!drag) return;
+                drag = null;
+                persistPos();
+                try {
+                    if (handle.hasPointerCapture(e.pointerId)) {
+                        handle.releasePointerCapture(e.pointerId);
+                    }
+                } catch (err) {}
+            }
+
+            handle.addEventListener('pointerdown', onPointerDown);
+            handle.addEventListener('pointermove', onPointerMove);
+            handle.addEventListener('pointerup', onPointerUp);
+            handle.addEventListener('pointercancel', onPointerUp);
+            handle.addEventListener('lostpointercapture', () => {
+                if (!drag) return;
+                drag = null;
+                persistPos();
+            });
 
             chartEl.addEventListener('click', function chartBranchDelegate(ev) {
                 const t = ev.target.closest('[data-branch-focus]');
