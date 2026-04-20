@@ -354,6 +354,8 @@
             -webkit-user-select: none;
         }
 
+        .branch-dock-mobile-bar { display: none; }
+
         .branch-dock-header {
             padding: 0.65rem 0.85rem;
             font-family: Cinzel, serif;
@@ -396,6 +398,60 @@
             margin-bottom: 0.5rem;
         }
 
+        .branch-dock-mobile-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--primary);
+            letter-spacing: 0.02em;
+        }
+
+        .branch-dock-mobile-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .branch-dock-select {
+            width: 100%;
+            min-width: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem 2.4rem 0.75rem 0.85rem;
+            font: inherit;
+            font-size: 0.9rem;
+            color: var(--text);
+            background:
+                linear-gradient(45deg, transparent 50%, var(--primary-soft) 50%) calc(100% - 16px) calc(50% - 3px) / 6px 6px no-repeat,
+                linear-gradient(135deg, var(--primary-soft) 50%, transparent 50%) calc(100% - 11px) calc(50% - 3px) / 6px 6px no-repeat,
+                #fff;
+            box-shadow: 0 2px 8px rgba(36, 59, 83, 0.08);
+        }
+
+        .branch-dock-select:focus {
+            outline: 2px solid rgba(61, 90, 128, 0.22);
+            outline-offset: 1px;
+        }
+
+        .branch-dock-mobile-active {
+            font-size: 0.72rem;
+            color: var(--muted);
+            line-height: 1.35;
+        }
+
+        .branch-dock-mobile-active strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .branch-dock-clear {
+            flex: 0 0 auto;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
         .branch-dock-list {
             display: flex;
             flex-direction: column;
@@ -406,12 +462,43 @@
         }
 
         @media (max-width: 640px) {
-            .branch-dock-header {
-                min-height: 48px;
-                padding: 0.7rem 0.85rem;
+            .branch-dock {
+                left: 0.75rem !important;
+                right: 0.75rem;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+                top: auto !important;
+                width: auto;
+                max-height: none;
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.98);
+                box-shadow: 0 14px 34px rgba(36, 59, 83, 0.2);
             }
-            .branch-dock-drag-hint {
-                font-size: 0.72rem;
+            .branch-dock-header {
+                display: none;
+            }
+            .branch-dock-body {
+                padding: 0.75rem;
+                overflow: visible;
+            }
+            .branch-dock-mobile-bar {
+                display: flex;
+                flex-direction: column;
+                gap: 0.45rem;
+            }
+            .branch-dock-hint,
+            .branch-dock-list {
+                display: none;
+            }
+            .branch-dock-mobile-controls {
+                align-items: stretch;
+            }
+            .branch-dock-select {
+                font-size: 1rem;
+                min-height: 46px;
+            }
+            .branch-dock-clear {
+                min-height: 46px;
+                padding-inline: 0.9rem;
             }
         }
 
@@ -518,6 +605,16 @@
             <span class="branch-dock-drag-hint" aria-hidden="true">⋮⋮ arrastar</span>
         </div>
         <div class="branch-dock-body">
+            <div class="branch-dock-mobile-bar">
+                <label class="branch-dock-mobile-label" for="branch-dock-select">Filtrar ramo</label>
+                <div class="branch-dock-mobile-controls">
+                    <select id="branch-dock-select" class="branch-dock-select" onchange="branchDockSelectChange(this)">
+                        <option value="">Toda a família</option>
+                    </select>
+                    <button type="button" class="secondary branch-dock-clear" id="branch-dock-clear" onclick="setFamilyBranchFocus(null)">Limpar</button>
+                </div>
+                <p class="branch-dock-mobile-active" id="branch-dock-mobile-active">Exibindo <strong>toda a família</strong>.</p>
+            </div>
             <p class="branch-dock-hint">Toque num <strong>nome</strong> abaixo ou num <strong>cartão</strong> colorido na árvore para isolar aquele ramo. Use <strong>Enquadrar tudo</strong> para recentrar.</p>
             <div id="branch-dock-list" class="branch-dock-list"></div>
         </div>
@@ -1150,8 +1247,10 @@
 
         function refreshBranchDockList() {
             const el = document.getElementById('branch-dock-list');
+            const select = document.getElementById('branch-dock-select');
             if (!el || !fullChartData.length) {
                 if (el) el.innerHTML = '';
+                if (select) select.innerHTML = '<option value="">Toda a família</option>';
                 return;
             }
             const entries = getBranchDockEntries(fullChartData);
@@ -1167,6 +1266,20 @@
                         '</button>'
                 )
                 .join('');
+            if (select) {
+                select.innerHTML =
+                    '<option value="">Toda a família</option>' +
+                    entries
+                        .map(
+                            e =>
+                                '<option value="' +
+                                encodeURIComponent(e.key) +
+                                '">' +
+                                escapeHtml(e.label) +
+                                '</option>'
+                        )
+                        .join('');
+            }
             refreshBranchDockActive();
         }
 
@@ -1177,6 +1290,21 @@
                 const act = focusedBranchKey ? val === focusedBranchKey : false;
                 b.classList.toggle('active', act);
             });
+            const select = document.getElementById('branch-dock-select');
+            if (select) {
+                select.value = focusedBranchKey ? encodeURIComponent(focusedBranchKey) : '';
+            }
+            const status = document.getElementById('branch-dock-mobile-active');
+            if (status) {
+                const selectedLabel = (() => {
+                    if (!focusedBranchKey) return 'toda a família';
+                    const opt = select ? select.selectedOptions[0] : null;
+                    return opt && opt.textContent ? opt.textContent : focusedBranchKey;
+                })();
+                status.innerHTML = 'Exibindo <strong>' + escapeHtml(selectedLabel) + '</strong>.';
+            }
+            const clearBtn = document.getElementById('branch-dock-clear');
+            if (clearBtn) clearBtn.disabled = !focusedBranchKey;
         }
 
         let branchDockInteractionInited = false;
@@ -1195,7 +1323,16 @@
                 if (s) Object.assign(pos, JSON.parse(s));
             } catch (e) {}
 
+            function isCompactBranchDock() {
+                return window.matchMedia('(max-width: 640px)').matches;
+            }
+
             function applyPos() {
+                if (isCompactBranchDock()) {
+                    dock.style.left = '';
+                    dock.style.top = '';
+                    return;
+                }
                 pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - dock.offsetWidth - 8));
                 pos.top = Math.max(72, Math.min(pos.top, window.innerHeight - 80));
                 dock.style.left = pos.left + 'px';
@@ -1213,6 +1350,7 @@
             }
 
             function onPointerDown(e) {
+                if (isCompactBranchDock()) return;
                 if (e.pointerType === 'mouse' && e.button !== 0) return;
                 e.preventDefault();
                 try {
@@ -1269,6 +1407,11 @@
 
         window.branchDockChipClick = function (btn) {
             const enc = btn.getAttribute('data-branch');
+            setFamilyBranchFocus(enc ? decodeURIComponent(enc) : null);
+        };
+
+        window.branchDockSelectChange = function (selectEl) {
+            const enc = selectEl.value;
             setFamilyBranchFocus(enc ? decodeURIComponent(enc) : null);
         };
 
