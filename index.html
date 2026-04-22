@@ -424,6 +424,22 @@
             cursor: pointer;
         }
 
+        .node-card .role-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            margin-bottom: 0.3rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .node-card.role-eu { border-left: 5px solid #d90429; }
+        .node-card.role-anc { border-left: 5px solid #2a9d8f; }
+        .node-card.role-desc { border-left: 5px solid #f4a261; }
+
         .node-card .node-focus-hint {
             font-size: 0.62rem;
             color: inherit;
@@ -433,28 +449,89 @@
             letter-spacing: 0.02em;
         }
 
-        @media (max-width: 720px) {
-            header { flex-direction: column; align-items: stretch; }
-            .controls { justify-content: center; }
-            .sheet-source {
-                width: 100%;
-                min-width: 0;
+            .history-section {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                background: #fff;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 0.35rem 0.45rem;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.06);
             }
-            .sheet-url-input {
-                min-width: 0;
-                font-size: 0.9rem;
+
+            .history-label {
+                font-size: 0.78rem;
+                color: var(--primary);
+                font-weight: 600;
+                white-space: nowrap;
             }
-            .branch-combobox {
-                width: 100%;
-                justify-content: space-between;
+
+            .history-select {
+                min-width: 150px;
+                appearance: none;
+                -webkit-appearance: none;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.5rem 2rem 0.5rem 0.65rem;
+                font: inherit;
+                font-size: 0.84rem;
+                color: var(--text);
+                background:
+                    linear-gradient(45deg, transparent 50%, var(--primary-soft) 50%) calc(100% - 13px) calc(50% - 2px) / 5px 5px no-repeat,
+                    linear-gradient(135deg, var(--primary-soft) 50%, transparent 50%) calc(100% - 9px) calc(50% - 2px) / 5px 5px no-repeat,
+                    #fff;
             }
-            .branch-dock-select {
-                min-width: 0;
-                flex: 1 1 auto;
-                font-size: 0.92rem;
+
+            .who-am-i-section {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                background: #fff;
+                border: 1px solid var(--accent-soft);
+                border-radius: 10px;
+                padding: 0.35rem 0.45rem;
+                box-shadow: 0 2px 8px rgba(188, 108, 37, 0.12);
             }
-            h1 { font-size: 1.15rem; }
-        }
+
+            .who-am-i-label {
+                font-size: 0.78rem;
+                color: var(--accent);
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            .who-am-i-select {
+                min-width: 180px;
+                appearance: none;
+                -webkit-appearance: none;
+                border: 1px solid var(--accent-soft);
+                border-radius: 8px;
+                padding: 0.5rem 2rem 0.5rem 0.65rem;
+                font: inherit;
+                font-size: 0.84rem;
+                color: var(--text);
+                background:
+                    linear-gradient(45deg, transparent 50%, var(--accent) 50%) calc(100% - 13px) calc(50% - 2px) / 5px 5px no-repeat,
+                    linear-gradient(135deg, var(--accent) 50%, transparent 50%) calc(100% - 9px) calc(50% - 2px) / 5px 5px no-repeat,
+                    #fff;
+            }
+
+            @media (max-width: 720px) {
+                header { flex-direction: column; align-items: stretch; }
+                .controls { justify-content: center; }
+                .sheet-source, .history-section, .who-am-i-section {
+                    width: 100%;
+                    min-width: 0;
+                    justify-content: space-between;
+                }
+                .sheet-url-input, .history-select, .who-am-i-select {
+                    min-width: 0;
+                    flex: 1 1 auto;
+                    font-size: 0.9rem;
+                }
+                h1 { font-size: 1.15rem; }
+            }
     </style>
 </head>
 <body>
@@ -484,12 +561,24 @@
                 />
                 <button type="button" class="secondary" onclick="applySheetFromInput()">Usar planilha</button>
             </div>
+            <div id="history-section" class="history-section" style="display: none;">
+                <span class="history-label">Recentes</span>
+                <select id="history-select" class="history-select" onchange="historySelectChange(this)">
+                    <option value="">(Nenhuma)</option>
+                </select>
+            </div>
+            <div id="who-am-i-section" class="who-am-i-section" style="display: none;">
+                <span class="who-am-i-label">Quem sou eu?</span>
+                <select id="who-am-i-select" class="who-am-i-select" onchange="whoAmISelectChange(this)">
+                    <option value="">Selecione seu nome...</option>
+                </select>
+            </div>
             <div class="branch-combobox" aria-label="Filtro por ramo">
                 <span class="branch-combobox-label">Ramos</span>
                 <select id="branch-dock-select" class="branch-dock-select" onchange="branchDockSelectChange(this)">
                     <option value="">Toda a família</option>
                 </select>
-                <button type="button" class="secondary branch-dock-clear" id="branch-dock-clear" onclick="setFamilyBranchFocus(null)">Limpar</button>
+                <button type="button" class="secondary branch-dock-clear" id="branch-dock-clear" onclick="resetView()">Limpar</button>
             </div>
         </div>
     </header>
@@ -502,6 +591,11 @@
         </div>
         <div id="analysis-body" class="analysis-body"></div>
     </aside>
+
+    <div id="unified-badge" style="display:none; position:fixed; left:1.5rem; bottom:1.5rem; background:var(--accent); color:white; padding:0.5rem 1rem; border-radius:30px; font-size:0.8rem; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:1000; align-items:center; gap:0.5rem;">
+        <span>🌐 Modo Unificado Ativo</span>
+        <button type="button" onclick="exitUnifiedMode()" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px;">×</button>
+    </div>
 
     <div id="loader" class="loader">
         <div class="spinner"></div>
@@ -526,10 +620,170 @@
     <script>
         const DEFAULT_SHEET_ID = '13PqSDZ4y3UePTXLc3sLHiGLcsNyLMSf28uwBzeeNAoA';
         const DEFAULT_SHEET_GID = '0';
-        const CACHE_KEY_PREFIX = 'arvoregenealogica_sheet_csv_v1';
-        const CACHE_META_KEY_PREFIX = 'arvoregenealogica_sheet_csv_meta_v1';
+        const CACHE_KEY_PREFIX = 'arvoregenealogica_sheet_csv_v2';
+        const CACHE_META_KEY_PREFIX = 'arvoregenealogica_sheet_csv_meta_v2';
         const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+        const HISTORY_KEY = 'arvoregenealogica_recent_sheets_v1';
         let currentSheet = { id: DEFAULT_SHEET_ID, gid: DEFAULT_SHEET_GID };
+        let unifiedViewMode = false;
+        let selectedIdentity = null;
+
+        function loadSheetFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            const gid = params.get('gid');
+            const who = params.get('who');
+            
+            if (who) {
+                selectedIdentity = who;
+                unifiedViewMode = true;
+                return true;
+            }
+            
+            if (id) {
+                currentSheet = { id, gid: gid || DEFAULT_SHEET_GID };
+                selectedIdentity = null;
+                unifiedViewMode = false;
+                return true;
+            }
+            return false;
+        }
+
+        function syncUrlParams() {
+            const url = new URL(window.location);
+            if (unifiedViewMode && selectedIdentity) {
+                url.searchParams.set('who', selectedIdentity);
+                url.searchParams.delete('id');
+                url.searchParams.delete('gid');
+            } else {
+                url.searchParams.delete('who');
+                if (currentSheet.id === DEFAULT_SHEET_ID && currentSheet.gid === DEFAULT_SHEET_GID) {
+                    url.searchParams.delete('id');
+                    url.searchParams.delete('gid');
+                } else {
+                    url.searchParams.set('id', currentSheet.id);
+                    url.searchParams.set('gid', currentSheet.gid);
+                }
+            }
+            window.history.replaceState({}, '', url);
+        }
+
+        function saveToHistory(label) {
+            if (unifiedViewMode) return;
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            history = history.filter(h => h.id !== currentSheet.id || h.gid !== currentSheet.gid);
+            history.unshift({
+                id: currentSheet.id,
+                gid: currentSheet.gid,
+                label: label || 'Família sem nome',
+                t: Date.now()
+            });
+            history = history.slice(0, 10);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            refreshHistoryUi();
+            refreshIdentityUi();
+        }
+
+        function refreshHistoryUi() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const section = document.getElementById('history-section');
+            const select = document.getElementById('history-select');
+            if (!history.length || !section || !select) {
+                if (section) section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'flex';
+            const curVal = currentSheet.id + '::' + currentSheet.gid;
+            select.innerHTML = '<option value="">Árvores recentes...</option>' +
+                history.map(h => {
+                    const val = h.id + '::' + h.gid;
+                    const sel = val === curVal && !unifiedViewMode ? ' selected' : '';
+                    return `<option value="${val}"${sel}>${escapeHtml(h.label)}</option>`;
+                }).join('');
+        }
+
+        function refreshIdentityUi() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const section = document.getElementById('who-am-i-section');
+            const select = document.getElementById('who-am-i-select');
+            if (!history.length || !section || !select) {
+                if (section) section.style.display = 'none';
+                return;
+            }
+
+            const allNames = new Set();
+            history.forEach(h => {
+                const cacheKey = `${CACHE_KEY_PREFIX}_${h.id}_${h.gid}`;
+                const text = localStorage.getItem(cacheKey);
+                if (!text) return;
+                const lines = text.split('\n');
+                if (lines.length < 2) return;
+                const header = lines[0].split(',');
+                const nameIdx = header.findIndex(h => h.includes('Nome'));
+                if (nameIdx === -1) return;
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',');
+                    if (parts[nameIdx]) {
+                        const n = parts[nameIdx].replace(/^"|"$/g, '').trim();
+                        if (n) allNames.add(n);
+                    }
+                }
+            });
+
+            if (allNames.size === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'flex';
+            const sorted = Array.from(allNames).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+            select.innerHTML = '<option value="">Quem sou eu?</option>' +
+                sorted.map(n => {
+                    const sel = n === selectedIdentity ? ' selected' : '';
+                    return `<option value="${escapeHtml(n)}"${sel}>${escapeHtml(n)}</option>`;
+                }).join('');
+        }
+
+        window.whoAmISelectChange = function(el) {
+            const val = el.value;
+            if (!val) {
+                exitUnifiedMode();
+                return;
+            }
+            selectedIdentity = val;
+            unifiedViewMode = true;
+            syncUrlParams();
+            boot(false);
+        };
+
+        window.exitUnifiedMode = function() {
+            unifiedViewMode = false;
+            selectedIdentity = null;
+            document.getElementById('who-am-i-select').value = '';
+            syncUrlParams();
+            boot(false);
+        };
+
+        window.resetView = function() {
+            if (unifiedViewMode) {
+                exitUnifiedMode();
+            } else {
+                setFamilyBranchFocus(null);
+            }
+        };
+
+        window.historySelectChange = function(el) {
+            const val = el.value;
+            if (!val) return;
+            const [id, gid] = val.split('::');
+            currentSheet = { id, gid };
+            unifiedViewMode = false;
+            selectedIdentity = null;
+            document.getElementById('who-am-i-select').value = '';
+            syncSheetSourceUi();
+            syncUrlParams();
+            boot(false);
+        };
 
         function buildSheetEditUrl(id, gid) {
             return `https://docs.google.com/spreadsheets/d/${id}/edit?gid=${gid}#gid=${gid}`;
@@ -585,11 +839,6 @@
             if (input) input.value = getSheetEditUrl();
         }
 
-        /**
-         * Ordem genealógica em memória: descendentes de Hélio Marques e Celina Marques.
-         * "order" = degraus abaixo dos fundadores no vínculo Pai/Mãe usado no organograma.
-         * Agregados: cônjuge que entra na família; convém manter Tipo = Agregado e alinhar à geração do(a) par.
-         */
         const GENEALOGY_ORDER_TABLE = Object.freeze([
             {
                 order: 0,
@@ -628,7 +877,6 @@
             }
         ]);
 
-        const FOUNDERS = Object.freeze({ helio: 'Hélio Marques', celina: 'Celina Marques' });
         const FORCED_PAIR_DISPLAY_RULES = Object.freeze([
             { primaryToken: 'lucio', secondaryToken: 'regina' },
             { primaryToken: 'gilson', secondaryToken: 'sheila' },
@@ -639,6 +887,12 @@
         let lastGenealogyReport = null;
         let fullChartData = [];
         let focusedBranchKey = null;
+        let currentFamilyContext = {
+            familyLabel: 'Família',
+            founders: [],
+            foundersSet: new Set(),
+            primaryFounderId: null
+        };
         function normalizeTipoKey(s) {
             if (!s || typeof s !== 'string') return '';
             return s.trim().normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -663,6 +917,60 @@
             return null;
         }
 
+        function inferFamilyContext(people, rawData, canonicalizeName, vRootId) {
+            const markerCount = new Map();
+            rawData.forEach(row => {
+                const pai = canonicalizeName(row['Pai']);
+                const mae = canonicalizeName(row['Mãe']);
+                [pai, mae].forEach(parent => {
+                    if (!parent) return;
+                    if (people.has(parent)) return;
+                    const k = normalizeNameToken(parent);
+                    if (!k.includes('familia')) return;
+                    markerCount.set(parent, (markerCount.get(parent) || 0) + 1);
+                });
+            });
+
+            let familyLabel = 'Família';
+            if (markerCount.size) {
+                familyLabel = Array.from(markerCount.entries()).sort((a, b) => b[1] - a[1])[0][0];
+            }
+
+
+            const founders = [];
+            people.forEach(p => {
+                if (!p.parentId || p.parentId === vRootId) founders.push(p.id);
+            });
+
+            const childrenByParent = new Map();
+            people.forEach(n => {
+                if (!n.parentId) return;
+                if (!childrenByParent.has(n.parentId)) childrenByParent.set(n.parentId, []);
+                childrenByParent.get(n.parentId).push(n.id);
+            });
+            const countDesc = id => {
+                let c = 0;
+                const st = [...(childrenByParent.get(id) || [])];
+                while (st.length) {
+                    const cur = st.pop();
+                    c += 1;
+                    const kids = childrenByParent.get(cur);
+                    if (kids && kids.length) st.push(...kids);
+                }
+                return c;
+            };
+            const primaryFounderId = founders.length
+                ? founders.slice().sort((a, b) => countDesc(b) - countDesc(a))[0]
+                : null;
+
+            return {
+                familyLabel,
+                founders,
+                foundersSet: new Set(founders),
+                primaryFounderId
+            };
+        }
+
         function rankFromDeclaredTipo(tipoRaw) {
             const t = normalizeTipoKey(tipoRaw);
             if (!t || t === 'agregado' || t === 'membro') return null;
@@ -677,28 +985,38 @@
             return row ? row.label : '—';
         }
 
-        /** Profundidade só pelo parentId já resolvido (Pai||Mãe) até um fundador. */
-        function depthBelowFounders(personId, people, r1, r2) {
-            if (personId === r1 || personId === r2) return 0;
+        function depthBelowFounders(personId, people, foundersSet) {
+            if (foundersSet.has(personId)) return 0;
             let depth = 0;
             let cur = personId;
             for (let i = 0; i < 80; i++) {
                 const n = people.get(cur);
                 if (!n || !n.parentId) return null;
-                if (n.parentId === r1 || n.parentId === r2) return depth + 1;
+                if (foundersSet.has(n.parentId)) return depth + 1;
                 cur = n.parentId;
                 depth++;
             }
             return null;
         }
 
-        function buildGenealogyAnalysis(people, rawData, r1, r2) {
+        function buildGenealogyAnalysis(people, rawData, familyCtx) {
             const warnings = [];
             const tiposFrequency = new Map();
             const unknownTipos = new Set();
+            const requiredWarnings = [];
 
             rawData.forEach(row => {
+                const name = row['Nome(s)']?.trim();
                 const tipo = row['Tipo']?.trim();
+                const pai = row['Pai']?.trim();
+                const mae = row['Mãe']?.trim();
+                if (!name) return;
+                if (!tipo) {
+                    requiredWarnings.push(`${name}: campo "Tipo" está vazio.`);
+                }
+                if (!pai && !mae) {
+                    requiredWarnings.push(`${name}: preencha pelo menos "Pai" ou "Mãe" (use "Família ..." para fundadores).`);
+                }
                 if (!tipo) return;
                 tiposFrequency.set(tipo, (tiposFrequency.get(tipo) || 0) + 1);
                 const tk = normalizeTipoKey(tipo);
@@ -709,7 +1027,7 @@
 
             people.forEach((p, id) => {
                 const declared = rankFromDeclaredTipo(p.type);
-                const depth = depthBelowFounders(id, people, r1, r2);
+                const depth = depthBelowFounders(id, people, familyCtx.foundersSet);
                 if (p.type && normalizeTipoKey(p.type) === 'agregado') return;
                 if (declared === null || depth === null) return;
                 if (declared !== depth && depth >= 0) {
@@ -732,8 +1050,9 @@
 
             const suggestions = [
                 'Padronize **Tipo** com uma das palavras da tabela (Filho, Neto, Bisneto, Tataraneto ou Agregado). Evite variações não listadas (ex.: “Avó”) na mesma coluna dos descendentes, ou inclua-as na tabela no código.',
-                '**Pai** e **Mãe** devem repetir exatamente o nome que está em **Nome(s)** em outra linha. O organograma usa só um ascendente por pessoa (prioridade: Pai, senão Mãe). Se ambos forem sangue, prefira o que continua a linha principal.',
-                '**Agregado** é o cônjuge que entra na família; use sempre **Tipo** = Agregado para quem não é descendente de sangue de Hélio/Celina.',
+                '**Pai** e **Mãe** devem repetir exatamente o nome que está em **Nome(s)** em outra linha. O organograma usa só um ascendente por pessoa (prioridade: Pai, senão Mãe).',
+                'Para os fundadores, você pode usar **Pai** ou **Mãe** com um marcador como **Família Silva** / **Família Marques** para sinalizar a raiz da árvore.',
+                '**Agregado** é opcional; só preencha quando houver cônjuge.',
                 'Corrija grafias únicas (ex.: Lúcio/Lucio, Claudimeire/Claudmeire) para não duplicar pessoas no mapa.',
                 'Linhas só de aniversário sem nome completo podem ser removidas ou preenchidas para não poluir a árvore.'
             ];
@@ -742,6 +1061,7 @@
                 orderTable: GENEALOGY_ORDER_TABLE,
                 tiposFrequency: Array.from(tiposFrequency.entries()).sort((a, b) => b[1] - a[1]),
                 unknownTipos: Array.from(unknownTipos).sort(),
+                requiredWarnings,
                 warnings,
                 suggestions
             };
@@ -783,6 +1103,18 @@
                 rep.unknownTipos.forEach(t => {
                     html += '<div class="analysis-warn">' + escapeHtml(t) + '</div>';
                 });
+            }
+
+            html += '<h3>Campos obrigatórios (Nome + Tipo + Pai/Mãe)</h3>';
+            if (!rep.requiredWarnings || rep.requiredWarnings.length === 0) {
+                html += '<p>Nenhuma pendência de preenchimento obrigatório.</p>';
+            } else {
+                rep.requiredWarnings.slice(0, 120).forEach(w => {
+                    html += '<div class="analysis-warn">' + escapeHtml(w) + '</div>';
+                });
+                if (rep.requiredWarnings.length > 120) {
+                    html += '<p class="analysis-dim">… e mais ' + (rep.requiredWarnings.length - 120) + '.</p>';
+                }
             }
 
             html += '<h3>Avisos (Tipo vs. distância aos fundadores)</h3>';
@@ -893,16 +1225,168 @@
             panel.style.display = 'block';
         }
 
+        function getGenerationLevel(tipoRaw) {
+            const t = normalizeTipoKey(tipoRaw);
+            if (!t) return 5; // Default to 'Pai' level if unknown
+            // Tataravô > Bisavô > Avô > Pai > Filho
+            if (t.includes('tataravô') || t.includes('tataravó') || t.includes('fundador')) return 2;
+            if (t.includes('bisneto') || t.includes('bisneta')) return 5; // Bisneto is usually the child's parent level in the examples
+            if (t.includes('neto') || t.includes('neta')) return 4;
+            if (t.includes('tataraneto') || t.includes('tataraneta')) return 6;
+            if (t.includes('bisavô') || t.includes('bisavó')) return 3;
+            if (t.includes('filho') || t.includes('filha')) return 3;
+
+            // Mapping based on user example 1:
+            // Tataravô (2) -> Bisavô (3) -> Avô (4) -> Pai (5) -> Filho (6)
+            if (t === 'bisavô' || t === 'bisavó') return 3;
+            if (t === 'avô' || t === 'avó') return 4;
+            if (t === 'pai' || t === 'mãe') return 5;
+            if (t === 'filho' || t === 'filha') return 3; // Filho of founder
+            
+            return 5; 
+        }
+
         function processFamilyData(rawData) {
+            const people = new Map();
+            const canonicalByNorm = new Map();
+
+            // 1. PHASE ONE: Identify all names and their Generation Levels (Columns C/D priority)
+            rawData.forEach(row => {
+                const nameTxt = (row['Nome(s)'] || '').trim();
+                const typeTxt = (row['Tipo'] || '').trim();
+                if (!nameTxt) return;
+
+                const norm = normalizeNameToken(nameTxt);
+                if (!canonicalByNorm.has(norm)) canonicalByNorm.set(norm, nameTxt);
+            });
+
+            function canonicalizeName(t) {
+                const norm = normalizeNameToken(t);
+                return canonicalByNorm.get(norm) || (t || '').trim();
+            }
+
+            rawData.forEach(row => {
+                const name = canonicalizeName(row['Nome(s)']);
+                if (!name) return;
+                const type = (row['Tipo'] || '').trim();
+                
+                if (!people.has(name)) {
+                    people.set(name, {
+                        id: name,
+                        name: name,
+                        type: type,
+                        spouse: canonicalizeName(row['Agregado']),
+                        father: canonicalizeName(row['Pai']),
+                        mother: canonicalizeName(row['Mãe']),
+                        _lvl: getGenerationLevel(type)
+                    });
+                } else {
+                    const p = people.get(name);
+                    if (type) {
+                        p.type = type;
+                        p._lvl = getGenerationLevel(type);
+                    }
+                    if (row['Agregado']) p.spouse = canonicalizeName(row['Agregado']);
+                    if (row['Pai']) p.father = canonicalizeName(row['Pai']);
+                    if (row['Mãe']) p.mother = canonicalizeName(row['Mãe']);
+                }
+                
+                // Ensure parents exist
+                [row['Pai'], row['Mãe']].forEach(parRaw => {
+                    const par = canonicalizeName(parRaw);
+                    if (par && !people.has(par) && !normalizeNameToken(par).includes('familia')) {
+                        people.set(par, { id: par, name: par, type: 'Ancestral', spouse: '', _lvl: 2 });
+                    }
+                });
+            });
+
+            // 2. PHASE TWO: Interlink according to hierarchy levels
+            const vRootId = VIRTUAL_ROOT_ID;
+            const spousesToHide = new Set();
+
+            // Determine Spouse Visibility FIRST
+            people.forEach(p => {
+                const partner = p.spouse;
+                if (!partner || !people.has(partner)) return;
+                const partnerNode = people.get(partner);
+
+                const pIsAgregado = normalizeTipoKey(p.type) === 'agregado';
+                const parIsAgregado = normalizeTipoKey(partnerNode.type) === 'agregado';
+
+                if (pIsAgregado && !parIsAgregado) {
+                    spousesToHide.add(p.name);
+                    partnerNode.spouse = p.name;
+                    p._lvl = partnerNode._lvl; // Follow partner level
+                } else if (parIsAgregado && !pIsAgregado) {
+                    spousesToHide.add(partner);
+                    p.spouse = partner;
+                }
+            });
+
+            // Build Relationship Chains with Remapping
+            people.forEach(p => {
+                let father = p.father;
+                let mother = p.mother;
+                
+                // If father is hidden, try mother, and vice versa
+                let chosenParent = null;
+                if (father && !spousesToHide.has(father)) chosenParent = father;
+                else if (mother && !spousesToHide.has(mother)) chosenParent = mother;
+                else if (father && spousesToHide.has(father)) {
+                    const hiddenFatherNode = people.get(father);
+                    if (hiddenFatherNode && hiddenFatherNode.spouse && !spousesToHide.has(hiddenFatherNode.spouse)) {
+                        chosenParent = hiddenFatherNode.spouse;
+                    }
+                } else if (mother && spousesToHide.has(mother)) {
+                    const hiddenMotherNode = people.get(mother);
+                    if (hiddenMotherNode && hiddenMotherNode.spouse && !spousesToHide.has(hiddenMotherNode.spouse)) {
+                        chosenParent = hiddenMotherNode.spouse;
+                    }
+                }
+                p.parentId = chosenParent || vRootId;
+                
+                let line = '';
+                if (p.father && p.mother) line = `Filho(a) de: ${p.father} · ${p.mother}`;
+                else if (p.father || p.mother) line = `Filho(a) de: ${p.father || p.mother}`;
+                p.parentsLine = line;
+            });
+
+            // Identify family context AFTER parentId is set
+            const familyCtx = inferFamilyContext(people, rawData, canonicalizeName, vRootId);
+            currentFamilyContext = familyCtx;
+
+            const chartData = [{
+                id: vRootId,
+                name: familyCtx.familyLabel || 'Família',
+                type: 'Raiz',
+                parentId: null,
+                _lvl: 1
+            }];
+
+
+            // Assemble Final Data
+            people.forEach(p => {
+                if (!spousesToHide.has(p.name)) chartData.push(p);
+            });
+
+            // Ensure hierarchy consistency
+            const idsInChart = new Set(chartData.map(n => n.id));
+            chartData.forEach(n => {
+                if (n.parentId && !idsInChart.has(n.parentId)) n.parentId = vRootId;
+            });
+
+            const genealogyReport = buildGenealogyAnalysis(people, rawData, familyCtx);
+            return { chartData, genealogyReport };
+        }
+
+        function processFamilyDataForKinship(rawData) {
             const people = new Map();
             const canonicalByNorm = new Map();
 
             rawData.forEach(row => {
                 const rawName = row['Nome(s)']?.trim();
-                if (!rawName) return;
                 const norm = normalizeNameToken(rawName);
-                if (!norm) return;
-                if (!canonicalByNorm.has(norm)) canonicalByNorm.set(norm, rawName);
+                if (rawName && norm && !canonicalByNorm.has(norm)) canonicalByNorm.set(norm, rawName);
             });
 
             function canonicalizeName(raw) {
@@ -912,185 +1396,65 @@
                 return canonicalByNorm.get(norm) || txt;
             }
 
-            rawData.forEach(row => {
-                const name = canonicalizeName(row['Nome(s)']);
-                const type = row['Tipo']?.trim();
-                const spouse = canonicalizeName(row['Agregado']);
-                const father = canonicalizeName(row['Pai']);
-                const mother = canonicalizeName(row['Mãe']);
+            function getTypeWeight(type) {
+                const t = (type || '').toLowerCase();
+                if (t.includes('ancestral')) return 10;
+                if (t.includes('membro')) return 8;
+                if (t.includes('filho')) return 5;
+                if (t.includes('agregado')) return 1;
+                return 0;
+            }
 
-                if (!name) return;
+            rawData.forEach(row => {
+                const nameText = row['Nome(s)']?.trim();
+                if (!nameText) return;
+                
+                const typeText = row['Tipo']?.trim();
+                const fatherText = row['Pai']?.trim();
+                const motherText = row['Mãe']?.trim();
+                const spouseText = row['Agregado']?.trim();
+
+                const name = canonicalizeName(nameText);
+                const type = typeText || 'Membro';
+                const spouse = canonicalizeName(spouseText);
+                const father = canonicalizeName(fatherText);
+                const mother = canonicalizeName(motherText);
+                const currentWeight = getTypeWeight(type);
 
                 let parentsLine = '';
                 if (father && mother) parentsLine = 'Filho(a) de: ' + father + ' · ' + mother;
                 else if (father) parentsLine = 'Filho(a) de: ' + father;
                 else if (mother) parentsLine = 'Filho(a) de: ' + mother;
 
-                const primaryParent = father || mother;
-
                 if (!people.has(name)) {
                     people.set(name, {
                         id: name,
                         name: name,
-                        type: type || 'Membro',
+                        type: type,
                         spouse: spouse || '',
-                        parentId: null,
-                        parentsLine: parentsLine || ''
+                        parentId: father || mother || null,
+                        parentsLine: parentsLine || '',
+                        _weight: currentWeight
                     });
                 } else {
                     const p = people.get(name);
-                    if (type) p.type = type;
-                    if (spouse) p.spouse = spouse;
-                    if (parentsLine) p.parentsLine = parentsLine;
-                }
-
-                if (spouse) {
-                    if (!people.has(spouse)) {
-                        people.set(spouse, {
-                            id: spouse,
-                            name: spouse,
-                            type: 'Agregado',
-                            spouse: name,
-                            parentId: null,
-                            parentsLine: ''
-                        });
+                    if (currentWeight > (p._weight || 0)) {
+                        p.type = type;
+                        p.parentId = father || mother || p.parentId;
+                        p.parentsLine = parentsLine || p.parentsLine;
+                        p._weight = currentWeight;
+                    }
+                    if (spouse && !p.spouse.includes(spouse)) {
+                        p.spouse = p.spouse ? p.spouse + ' & ' + spouse : spouse;
                     }
                 }
-
-                if (primaryParent) {
-                    people.get(name).parentId = primaryParent;
-                    if (!people.has(primaryParent)) {
-                        people.set(primaryParent, {
-                            id: primaryParent,
-                            name: primaryParent,
-                            type: 'Ancestral',
-                            spouse: '',
-                            parentId: null,
-                            parentsLine: ''
-                        });
-                    }
+                
+                if (spouse && !people.has(spouse)) {
+                    people.set(spouse, { id: spouse, name: spouse, type: 'Agregado', spouse: name, parentId: null, parentsLine: '', _weight: 1 });
                 }
             });
 
-            const root1 = 'Hélio Marques';
-            const root2 = 'Celina Marques';
-
-            if (people.has(root1) && people.has(root2)) {
-                people.forEach(p => {
-                    if (p.parentId === root2) p.parentId = root1;
-                });
-                people.get(root1).spouse = root2;
-            }
-
-            const genealogyReport = buildGenealogyAnalysis(people, rawData, root1, root2);
-
-            const virtualRootId = 'FAMILIA_ROOT';
-            const chartData = [{
-                id: virtualRootId,
-                name: 'Família Marques',
-                type: 'Raiz',
-                spouse: '',
-                parentId: null,
-                parentsLine: ''
-            }];
-
-            const spousesToHide = new Set();
-
-            people.forEach(p => {
-                if (!p.parentId) p.parentId = virtualRootId;
-            });
-
-            people.forEach(p => {
-                const partner = p.spouse;
-                if (!partner || !people.has(partner)) return;
-
-                if (
-                    (p.name === root1 && partner === root2) ||
-                    (p.name === root2 && partner === root1)
-                ) {
-                    spousesToHide.add(root2);
-                    people.get(root1).spouse = root2;
-                    return;
-                }
-
-                const pHasParents = p.parentId !== virtualRootId;
-                const partnerHasParents = people.get(partner).parentId !== virtualRootId;
-                const tipoP = (p.type || '').trim().toLowerCase();
-                const tipoPar = (people.get(partner).type || '').trim().toLowerCase();
-
-                if (partnerHasParents && !pHasParents) {
-                    spousesToHide.add(p.name);
-                    return;
-                }
-                if (p.name === root1) {
-                    spousesToHide.add(partner);
-                    p.spouse = partner;
-                    return;
-                }
-                if (pHasParents && !partnerHasParents) {
-                    spousesToHide.add(partner);
-                    p.spouse = partner;
-                    return;
-                }
-                if (pHasParents && partnerHasParents) {
-                    const forcedPrimary = getForcedPairPrimaryName(p.name, partner);
-                    if (forcedPrimary) {
-                        const hidden = forcedPrimary === p.name ? partner : p.name;
-                        spousesToHide.add(hidden);
-                        const mainNode = people.get(forcedPrimary);
-                        if (mainNode) mainNode.spouse = hidden;
-                        return;
-                    }
-
-                    // Quando ambos têm pai/mãe na árvore e nenhum é Agregado,
-                    // manter os dois como nós independentes evita "duplicar" pessoa
-                    // (um nó próprio + nome no campo de cônjuge de outro nó).
-                    if (tipoP !== 'agregado' && tipoPar !== 'agregado') {
-                        if (p.spouse === partner) p.spouse = '';
-                        const partnerNode = people.get(partner);
-                        if (partnerNode && partnerNode.spouse === p.name) partnerNode.spouse = '';
-                        return;
-                    }
-                    if (tipoP === 'agregado' && tipoPar !== 'agregado') {
-                        spousesToHide.add(p.name);
-                    } else if (tipoPar === 'agregado' && tipoP !== 'agregado') {
-                        spousesToHide.add(partner);
-                        p.spouse = partner;
-                    } else if (p.name.localeCompare(partner) < 0) {
-                        spousesToHide.add(partner);
-                        p.spouse = partner;
-                    } else {
-                        spousesToHide.add(p.name);
-                    }
-                    return;
-                }
-                if (!spousesToHide.has(p.name) && !spousesToHide.has(partner)) {
-                    spousesToHide.add(partner);
-                    p.spouse = partner;
-                }
-            });
-
-            // Quem é referenciado como pai/mãe na árvore precisa existir como nó. Se estiver
-            // só em spousesToHide, o d3-org-chart quebra com "missing: <nome>".
-            const neededAsParent = new Set();
-            people.forEach(p => {
-                if (p.parentId && p.parentId !== virtualRootId) neededAsParent.add(p.parentId);
-            });
-            neededAsParent.forEach(id => { spousesToHide.delete(id); });
-
-            people.forEach(p => {
-                if (!spousesToHide.has(p.name)) chartData.push(p);
-            });
-
-            const idsInChart = new Set(chartData.map(n => n.id));
-            for (let i = 1; i < chartData.length; i++) {
-                const n = chartData[i];
-                if (n.parentId && !idsInChart.has(n.parentId)) {
-                    n.parentId = virtualRootId;
-                }
-            }
-
-            return { chartData, genealogyReport };
+            return { people };
         }
 
         const VIRTUAL_ROOT_ID = 'FAMILIA_ROOT';
@@ -1102,8 +1466,10 @@
             return Math.abs(h) % 360;
         }
 
-        /** Profundidade na árvore (0 = raiz virtual). Usada para tamanho e contraste entre gerações. */
         function depthFromVirtualRoot(id, byId, virtualRootId) {
+            const n = byId.get(id);
+            if (n && n._lvl != null) return n._lvl - 1; // Convert 1-based lvl to 0-based depth
+            
             if (id === virtualRootId) return 0;
             let depth = 0;
             let cur = id;
@@ -1111,103 +1477,169 @@
             while (cur !== virtualRootId) {
                 if (seen.has(cur)) break;
                 seen.add(cur);
-                const n = byId.get(cur);
-                if (!n || !n.parentId) break;
-                cur = n.parentId;
+                const node = byId.get(cur);
+                if (!node || !node.parentId) break;
+                cur = node.parentId;
                 depth++;
             }
             return depth;
         }
 
-        /** Ramo = qual filho(a) direto(a) de Hélio está acima desta pessoa (uma “família” por cor). */
-        function branchKeyUnderHelio(id, byId, virtualRootId, helioId) {
+        function branchKeyUnderFounders(id, byId, virtualRootId, familyCtx) {
             if (id === virtualRootId) return '__raiz__';
-            if (id === helioId || id === FOUNDERS.celina) return '__fundadores__';
+            if (familyCtx.foundersSet.has(id)) return '__fundadores__';
+            
             let cur = id;
             const seen = new Set();
-            for (let i = 0; i < 120; i++) {
+            for (let i = 0; i < 150; i++) {
                 if (seen.has(cur)) return '__ciclo__';
                 seen.add(cur);
                 const n = byId.get(cur);
-                if (!n || !n.parentId) return '__sem_pai__';
-                if (n.parentId === helioId) return cur;
-                if (n.parentId === virtualRootId) {
-                    if (cur === helioId) return '__fundadores__';
-                    return '__direto_raiz_' + cur;
-                }
+                if (!n) return '__sem_dados__';
+                if (!n.parentId || n.parentId === virtualRootId) return cur;
+                
+                // Se chegamos no Nível 3 (Filho/Bisavô), este é o dono do ramo
+                if (n._lvl === 3) return cur;
+                
                 cur = n.parentId;
             }
             return '__desconhecido__';
         }
 
+        function branchColorFor(id, chartData, virtualRootId, familyCtx) {
+            const byId = new Map(chartData.map(n => [n.id, n]));
+            const key = branchKeyUnderFounders(id, byId, virtualRootId, familyCtx);
+            if (id === virtualRootId) return '#1b2838';
+            if (familyCtx.foundersSet.has(id) || key === '__fundadores__') return '#1e40af';
+            return `hsl(${hashHue(key)} 40% 40%)`;
+        }
+
         function annotateVisualizationMeta(chartData) {
             const byId = new Map(chartData.map(n => [n.id, n]));
-            const helioId = FOUNDERS.helio;
+            const virtualRootId = VIRTUAL_ROOT_ID;
 
+            // 1. Basic properties and depth
             chartData.forEach(n => {
-                n._depth = depthFromVirtualRoot(n.id, byId, VIRTUAL_ROOT_ID);
-                n._branchKey = branchKeyUnderHelio(n.id, byId, VIRTUAL_ROOT_ID, helioId);
+                n._depth = depthFromVirtualRoot(n.id, byId, virtualRootId);
             });
 
-            const branchInheritBad = new Set(['__sem_pai__', '__desconhecido__', '__ciclo__']);
+            // 2. Robust Branch Assignment (Top-Down Propagation)
+            const branchHeads = chartData.filter(n => n._lvl === 3 && n.id !== virtualRootId);
+            const childrenByParent = new Map();
             chartData.forEach(n => {
-                if (branchInheritBad.has(n._branchKey) && n.spouse) {
-                    const p = byId.get(n.spouse);
-                    if (p && p._branchKey && !branchInheritBad.has(p._branchKey)) {
-                        n._branchKey = p._branchKey;
+                if (n.parentId) {
+                    if (!childrenByParent.has(n.parentId)) childrenByParent.set(n.parentId, []);
+                    childrenByParent.get(n.parentId).push(n.id);
+                }
+            });
+
+            const tagLineage = (rootId, key) => {
+                const stack = [rootId];
+                while (stack.length) {
+                    const cid = stack.pop();
+                    const cn = byId.get(cid);
+                    if (cn) {
+                        cn._branchKey = key;
+                        const kids = childrenByParent.get(cid) || [];
+                        stack.push(...kids);
+                    }
+                }
+            };
+
+            // Initialize keys
+            chartData.forEach(n => {
+                if (n.id === virtualRootId) n._branchKey = '__raiz__';
+                else if (currentFamilyContext.foundersSet.has(n.id)) n._branchKey = '__fundadores__';
+                else if (!n._branchKey) n._branchKey = branchKeyUnderFounders(n.id, byId, virtualRootId, currentFamilyContext);
+            });
+
+            // Force propagation from level 3 heads (ensures children like Eder take their descendants)
+            branchHeads.forEach(head => {
+                tagLineage(head.id, head.id);
+            });
+
+            // 3. Spouse inheritance (For aggregated spouses missing parents)
+            chartData.forEach(n => {
+                if ((!n._branchKey || n._branchKey === n.id || n._branchKey === '__desconhecido__') && n.spouse) {
+                    const partner = byId.get(n.spouse);
+                    if (partner && partner._branchKey && !partner._branchKey.startsWith('__')) {
+                        n._branchKey = partner._branchKey;
                     }
                 }
             });
 
+            // 3. Visual Styling (Diferenciação Clara de Modos)
             chartData.forEach(n => {
+                if (n.id === virtualRootId) {
+                    n._cardBg = '#0f172a'; 
+                    n._cardBorder = '#1e3a8a';
+                    n._nameColor = '#f8fafc';
+                    n._roleColor = '#94a3b8';
+                    n._linkStroke = '#1e40af';
+                    n._nameSizePx = 18.5;
+                    return;
+                }
+
                 const d = n._depth;
                 const key = String(n._branchKey);
 
-                if (n.id === VIRTUAL_ROOT_ID) {
-                    n._cardBg = 'linear-gradient(145deg, #1b2838 0%, #2c4562 55%, #3d5a80 100%)';
-                    n._cardBorder = '#1a2332';
-                    n._nameColor = '#f8fafc';
-                    n._roleColor = 'rgba(248,250,252,0.78)';
-                    n._parentsColor = 'rgba(248,250,252,0.72)';
-                    n._spouseColor = '#fde68a';
-                    n._nameSizePx = 17;
-                    n._linkStroke = '#64748b';
-                    return;
-                }
-
-                if (n.id === helioId || n.id === FOUNDERS.celina || key === '__fundadores__') {
-                    n._cardBg = 'linear-gradient(160deg, #0f172a 0%, #1e3a5f 45%, #1e40af 100%)';
-                    n._cardBorder = '#0c1422';
-                    n._nameColor = '#f1f5f9';
-                    n._roleColor = 'rgba(241,245,249,0.82)';
-                    n._parentsColor = 'rgba(226,232,240,0.88)';
+                // MODO PEDIGREE (3 BRANCHES COLORIDAS)
+                if (n._branchColor) {
+                    const bg = n._branchColor;
+                    n._cardBg = bg;
+                    n._cardBorder = bg;
+                    n._nameColor = '#ffffff';
+                    n._roleColor = 'rgba(255,255,255,0.85)';
+                    n._parentsColor = 'rgba(255,255,255,0.7)';
                     n._spouseColor = '#fde047';
-                    n._nameSizePx = 16;
-                    n._linkStroke = '#475569';
+                    n._nameSizePx = Math.max(11.5, 14.5 - d * 0.6);
+                    n._linkStroke = bg;
                     return;
                 }
 
-                const hue = hashHue(key);
-                const L = Math.max(72, 95 - d * 3.2);
-                const S = Math.min(48, 26 + Math.min(d, 6) * 3.2);
-                n._cardBg = `hsl(${hue} ${S}% ${L}%)`;
-                n._cardBorder = `hsl(${hue} 38% ${Math.max(24, 52 - d * 2.5)}%)`;
-                n._nameColor = `hsl(${hue} 26% ${Math.max(10, 20 - d * 0.8)}%)`;
-                n._roleColor = `hsl(${hue} 20% 32%)`;
-                n._parentsColor = `hsl(${hue} 16% 34%)`;
-                n._spouseColor = `hsl(${(hue + 38) % 360} 42% 36%)`;
-                n._linkStroke = `hsla(${hue}, 36%, 48%, 0.82)`;
-                n._nameSizePx = Math.max(11.5, 14.2 - d * 0.55);
+                // MODO PADRÃO (COLORS BY BRANCH AND GENERATION)
+                const isRoot = n.id === virtualRootId;
+                const isFounder = currentFamilyContext.foundersSet.has(n.id);
+
+                if (isRoot || isFounder) {
+                    // APENAS A RAIZ E OS FUNDADORES FICAM EM AZUL ESCURO
+                    n._cardBg = isRoot ? '#0f172a' : 'linear-gradient(165deg, #0f172a 0%, #1e40af 100%)';
+                    n._cardBorder = isRoot ? '#1e3a8a' : '#0c1422';
+                    n._nameColor = '#f8fafc';
+                    n._roleColor = isRoot ? '#94a3b8' : '#cbd5e1';
+                    n._parentsColor = '#94a3b8';
+                    n._spouseColor = '#fde047';
+                    n._nameSizePx = isRoot ? 18.5 : 16.5;
+                    n._linkStroke = isRoot ? '#1e40af' : '#475569';
+                } else {
+                    // TODOS OS RAMOS (Começando pelos Filhos/Bisavôs) GANHAM CORES HSL
+                    const hue = hashHue(key);
+                    const saturation = Math.min(65, 35 + Math.min(d, 5) * 5);
+                    const lightness = Math.max(68, 96 - d * 4.5);
+                    
+                    n._cardBg = `hsl(${hue} ${saturation}% ${lightness}%)`;
+                    n._cardBorder = `hsl(${hue} 45% ${Math.max(22, 52 - d * 3)}%)`;
+                    n._nameColor = `hsl(${hue} 35% ${Math.max(8, 18 - d * 0.8)}%)`;
+                    n._roleColor = `hsl(${hue} 30% 30%)`;
+                    n._parentsColor = `hsl(${hue} 25% 34%)`;
+                    n._spouseColor = `hsl(${(hue + 40) % 360} 50% 36%)`;
+                    n._linkStroke = `hsla(${hue}, 45%, 42%, 0.85)`;
+                    n._nameSizePx = Math.max(11.5, 14.5 - d * 0.6);
+                }
             });
         }
 
         function filterBranchSubset(fullData, branchKey) {
-            if (!branchKey || !fullData.length) return fullData;
+            if (!branchKey || !fullData.length || branchKey === '__raiz__') return fullData;
             const byId = new Map(fullData.map(n => [n.id, n]));
             const keep = new Set();
+            
+            // Todos que herdam este ramo ou são o próprio ramo
             fullData.forEach(n => {
                 if (n._branchKey === branchKey || n.id === branchKey) keep.add(n.id);
             });
+
+            // Caminho reverso para a raiz (ancestrais)
             let more = true;
             while (more) {
                 more = false;
@@ -1222,15 +1654,252 @@
             return fullData.filter(n => keep.has(n.id));
         }
 
+        function getLineageSubset(targetId, fullData) {
+            if (!targetId || !fullData.length) return fullData;
+            
+            const byId = new Map(fullData.map(n => [n.id, n]));
+            const childrenByParent = new Map();
+            const parentsByChild = new Map();
+
+            fullData.forEach(n => {
+                const pid = n.parentId;
+                if (!pid || pid === VIRTUAL_ROOT_ID) return;
+                
+                if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
+                childrenByParent.get(pid).push(n.id);
+                
+                if (!parentsByChild.has(n.id)) parentsByChild.set(n.id, []);
+                parentsByChild.get(n.id).push(pid);
+            });
+
+            const keep = new Set();
+            const queue = [targetId];
+            keep.add(targetId);
+
+            const upQueue = [targetId];
+            while (upQueue.length) {
+                const cur = upQueue.pop();
+                const parents = parentsByChild.get(cur) || [];
+                parents.forEach(p => {
+                    if (!keep.has(p)) {
+                        keep.add(p);
+                        upQueue.push(p);
+                    }
+                });
+            }
+
+            const downQueue = [targetId];
+            while (downQueue.length) {
+                const cur = downQueue.pop();
+                const children = childrenByParent.get(cur) || [];
+                children.forEach(c => {
+                    if (!keep.has(c)) {
+                        keep.add(c);
+                        downQueue.push(c);
+                    }
+                });
+            }
+
+            const members = Array.from(keep);
+            members.forEach(id => {
+                const parents = parentsByChild.get(id) || [];
+                parents.forEach(p => {
+                    const siblings = childrenByParent.get(p) || [];
+                    siblings.forEach(s => keep.add(s));
+                });
+            });
+
+            const currentKeep = Array.from(keep);
+            currentKeep.forEach(id => {
+                const n = byId.get(id);
+                if (n && n.spouse) {
+                    const partners = n.spouse.split(/[&|]/).map(s => s.trim());
+                    partners.forEach(p => {
+                        if (byId.has(p)) keep.add(p);
+                    });
+                }
+            });
+
+            keep.add(VIRTUAL_ROOT_ID);
+
+            return fullData.filter(n => keep.has(n.id));
+        }
+
         function getViewData() {
+            if (unifiedViewMode && selectedIdentity) {
+                return fullChartData.map(n => Object.assign({}, n));
+            }
             const base = focusedBranchKey
                 ? filterBranchSubset(fullChartData, focusedBranchKey)
                 : fullChartData;
             return base.map(n => Object.assign({}, n));
         }
 
+        function buildKinshipData(focusId, peopleMap) {
+            if (!focusId || !peopleMap.has(focusId)) return [];
+
+            const byId = peopleMap;
+            const childrenByParent = new Map();
+            const parentsByChild = new Map();
+
+            byId.forEach(p => {
+                const parents = [];
+                if (p.parentsLine) {
+                    const matches = p.parentsLine.match(/de: ([^|·]+)(?:[·|]|$)/g);
+                    if (matches) {
+                        matches.forEach(m => {
+                            const n = m.replace(/de: |[·|]/g, '').trim();
+                            if (n && byId.has(n)) parents.push(n);
+                        });
+                    }
+                }
+                if (p.parentId && !p.parentId.includes('ROOT') && byId.has(p.parentId)) {
+                    if (!parents.includes(p.parentId)) parents.push(p.parentId);
+                }
+
+                parents.forEach(pid => {
+                    if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
+                    childrenByParent.get(pid).push(p.id);
+                    if (!parentsByChild.has(p.id)) parentsByChild.set(p.id, []);
+                    parentsByChild.get(p.id).push(pid);
+                });
+            });
+
+            const kinshipData = [];
+            const focusPerson = byId.get(focusId);
+
+            kinshipData.push({
+                id: focusId,
+                name: focusPerson.name,
+                type: 'VOCÊ',
+                spouse: focusPerson.spouse,
+                parentId: null,
+                parentsLine: focusPerson.parentsLine,
+                _kinshipRole: 'Eu',
+                _branchColor: '#d90429'
+            });
+
+            // 1. Identificação dos Pais (Pai e Mãe)
+            const parents = parentsByChild.get(focusId) || [];
+            let paternalParent = null;
+            let maternalParent = null;
+
+            // Tenta identificar Pai e Mãe baseado no campo 'Tipo' ou heurística
+            parents.forEach(pid => {
+                const p = byId.get(pid);
+                const isFemale = p.type.toLowerCase().includes('feminino') || 
+                                 p.type.toLowerCase().includes('mulher') || 
+                                 /a$|e$/.test(p.name.toLowerCase().split(' ')[0]);
+                
+                if (isFemale && !maternalParent) maternalParent = pid;
+                else if (!isFemale && !paternalParent) paternalParent = pid;
+            });
+
+            // Fallback se não detectou por gênero
+            if (!paternalParent && parents.length > 0) paternalParent = parents[0];
+            if (!maternalParent && parents.length > 1) maternalParent = parents.find(p => p !== paternalParent);
+
+            if (paternalParent) {
+                const branchId = focusId + '_paternal';
+                kinshipData.push({
+                    id: branchId,
+                    name: 'LINHAGEM PATERNA',
+                    type: 'Ascendentes',
+                    parentId: focusId,
+                    _kinshipRole: 'Fundo',
+                    _branchColor: '#0077b6'
+                });
+                
+                const addAncestorsRecursive = (pid, parentOfNode, depth) => {
+                    if (depth > 4) return;
+                    const p = byId.get(pid);
+                    const kId = `anc_p_${pid}`;
+                    kinshipData.push({
+                        id: kId,
+                        name: p.name,
+                        type: p.type,
+                        spouse: p.spouse,
+                        parentId: parentOfNode,
+                        parentsLine: p.parentsLine,
+                        _kinshipRole: depth === 0 ? 'Pai' : (depth === 1 ? 'Avô' : 'Bisavô'),
+                        _branchColor: '#0077b6'
+                    });
+                    const ancestors = parentsByChild.get(pid) || [];
+                    ancestors.forEach(apid => addAncestorsRecursive(apid, kId, depth + 1));
+                };
+                addAncestorsRecursive(paternalParent, branchId, 0);
+            }
+
+            if (maternalParent) {
+                const branchId = focusId + '_maternal';
+                kinshipData.push({
+                    id: branchId,
+                    name: 'LINHAGEM MATERNA',
+                    type: 'Ascendentes',
+                    parentId: focusId,
+                    _kinshipRole: 'Fundo',
+                    _branchColor: '#9d4edd'
+                });
+                
+                const addAncestorsRecursive = (pid, parentOfNode, depth) => {
+                    if (depth > 4) return;
+                    const p = byId.get(pid);
+                    const kId = `anc_m_${pid}`;
+                    kinshipData.push({
+                        id: kId,
+                        name: p.name,
+                        type: p.type,
+                        spouse: p.spouse,
+                        parentId: parentOfNode,
+                        parentsLine: p.parentsLine,
+                        _kinshipRole: depth === 0 ? 'Mãe' : (depth === 1 ? 'Avó' : 'Bisavó'),
+                        _branchColor: '#9d4edd'
+                    });
+                    const ancestors = parentsByChild.get(pid) || [];
+                    ancestors.forEach(apid => addAncestorsRecursive(apid, kId, depth + 1));
+                };
+                addAncestorsRecursive(maternalParent, branchId, 0);
+            }
+
+            const children = childrenByParent.get(focusId) || [];
+            if (children.length > 0) {
+                const branchId = focusId + '_descendants';
+                kinshipData.push({
+                    id: branchId,
+                    name: 'DESCENDENTES',
+                    type: 'Família',
+                    parentId: focusId,
+                    _kinshipRole: 'Fundo',
+                    _branchColor: '#2a9d8f'
+                });
+
+                const addDescendantsRecursive = (cid, parentOfNode, depth) => {
+                    if (depth > 4) return;
+                    const c = byId.get(cid);
+                    const kId = `desc_${cid}`;
+                    kinshipData.push({
+                        id: kId,
+                        name: c.name,
+                        type: c.type,
+                        spouse: c.spouse,
+                        parentId: parentOfNode,
+                        parentsLine: c.parentsLine,
+                        _kinshipRole: depth === 0 ? 'Filho(a)' : 'Neto(a)',
+                        _branchColor: '#2a9d8f'
+                    });
+                    const kids = childrenByParent.get(cid) || [];
+                    kids.forEach(ckid => addDescendantsRecursive(ckid, kId, depth + 1));
+                };
+                children.forEach(cid => addDescendantsRecursive(cid, branchId, 0));
+            }
+
+            return kinshipData;
+        }
+
         function getBranchDockEntries(data) {
-            const helio = FOUNDERS.helio;
+            if (unifiedViewMode && selectedIdentity) return [];
+            
+            const founderId = currentFamilyContext.primaryFounderId;
             const out = [];
             const seenEdge = new Set();
             const byId = new Map(data.map(n => [n.id, n]));
@@ -1266,18 +1935,29 @@
 
             const processedPairs = new Set();
             data.forEach(n => {
-                if (n.parentId !== helio || n.id === helio) return;
-                const partner = n.spouse ? byId.get(n.spouse) : null;
-                const partnerIsSameLevel = !!(partner && partner.parentId === helio);
-                if (!partnerIsSameLevel) {
-                    out.push({ key: n.id, label: n.name, dim: false });
-                    return;
+                // Um chefe de ramo é qualquer um do Nível 3 (Bisavô/Filho) 
+                // que não seja um agregado isolado.
+                if (n._lvl !== 3 || n.id === VIRTUAL_ROOT_ID) return;
+                const isAgregado = normalizeTipoKey(n.type) === 'agregado';
+                
+                const partnerId = n.spouse;
+                const partner = partnerId ? byId.get(partnerId) : null;
+                
+                if (isAgregado && !partner) return; // Agregado sem parceiro no Nível 3 não inicia ramo
+
+                // Evita duplicar o casal (ex: Hélio + Celina)
+                const pairId = partner ? [n.id, partner.id].sort().join('::') : n.id;
+                if (processedPairs.has(pairId)) return;
+                processedPairs.add(pairId);
+
+                let label = n.name;
+                if (partner) {
+                    const rep = isAgregado ? partner : n;
+                    const spouse = isAgregado ? n : partner;
+                    label = `${rep.name} + ${spouse.name}`;
                 }
-                const pairKey = [n.id, partner.id].sort((x, y) => x.localeCompare(y, 'pt-BR')).join('::');
-                if (processedPairs.has(pairKey)) return;
-                processedPairs.add(pairKey);
-                const rep = chooseRepresentative(n, partner);
-                out.push({ key: rep.id, label: rep.name, dim: false });
+                
+                out.push({ key: n.id, label: label, dim: false });
             });
 
             data.forEach(n => {
@@ -1345,6 +2025,13 @@
             });
         }
 
+        window.identitySelectChange = function (selectEl) {
+            const name = selectEl.value;
+            selectedIdentity = name && name.length ? decodeURIComponent(name) : null;
+            syncUrlParams();
+            boot(); // Recarrega para aplicar a visão de linhagem ou visão total
+        };
+
         window.branchDockSelectChange = function (selectEl) {
             const enc = selectEl.value;
             setFamilyBranchFocus(enc ? decodeURIComponent(enc) : null);
@@ -1370,11 +2057,11 @@
                 .duration(zoomedBranch ? 200 : 400)
                 .nodeWidth(d => {
                     const depth = d.data._depth != null ? d.data._depth : 0;
-                    return Math.max(158, Math.round((236 - depth * 14) * (zoomedBranch ? 1.08 : 1)));
+                    return Math.max(158, Math.round((240 - depth * 14) * (zoomedBranch ? 1.08 : 1)));
                 })
                 .nodeHeight(d => {
                     const depth = d.data._depth != null ? d.data._depth : 0;
-                    return Math.max(68, Math.round((124 - depth * 9) * (zoomedBranch ? 1.06 : 1)));
+                    return Math.max(68, Math.round((120 - depth * 9) * (zoomedBranch ? 1.06 : 1)));
                 })
                 .childrenMargin(() => Math.round(56 * m))
                 .compactMarginBetween(() => Math.round(40 * m))
@@ -1399,8 +2086,7 @@
                         !bkStr.startsWith('__ciclo__') &&
                         !bkStr.startsWith('__sem_pai__') &&
                         !bkStr.startsWith('__desconhecido__') &&
-                        d.data.id !== FOUNDERS.helio &&
-                        d.data.id !== FOUNDERS.celina;
+                        !currentFamilyContext.foundersSet.has(d.data.id);
                     const dataFocus = canFocus
                         ? ' data-branch-focus="' + encodeURIComponent(String(bk)) + '"'
                         : '';
@@ -1422,8 +2108,14 @@
                     const nc = d.data._nameColor || '#0f172a';
                     const rc = d.data._roleColor || '#64748b';
                     const ns = (d.data._nameSizePx || 13) + 'px';
+                    let kinshipCls = '';
+                    if (d.data._kinshipRole === 'Eu') kinshipCls = ' role-eu';
+                    else if (d.data._kinshipRole === 'Ancestral' || d.data._kinshipRole === 'Progenitor') kinshipCls = ' role-anc';
+                    else if (d.data._kinshipRole === 'Filho(a)' || d.data._kinshipRole === 'Descendente') kinshipCls = ' role-desc';
+
                     return `
-                        <div class="node-card${focusCls}" style="background:${bg};border-color:${border};"${dataFocus}>
+                        <div class="node-card${focusCls}${kinshipCls}" style="background:${bg};border-color:${border};"${dataFocus}>
+                            ${d.data._kinshipRole ? `<div class="role-badge">${d.data._kinshipRole}</div>` : ''}
                             <div class="node-role" style="color:${rc}">${d.data.type}</div>
                             <div class="node-name" style="color:${nc};font-size:${ns}">${d.data.name}</div>
                             ${parents}
@@ -1432,6 +2124,8 @@
                         </div>
                     `;
                 })
+                .expandAll()
+                .initialZoom(0.85)
                 .render();
 
             chart.expandAll().fit();
@@ -1451,6 +2145,13 @@
                     refreshBranchDockList();
                     renderChart(getViewData());
                     setStatus(fromCache, savedAt);
+
+                    const familyLabel = currentFamilyContext.familyLabel || 'Família';
+                    document.title = 'Árvore genealógica — ' + familyLabel;
+                    const h1 = document.querySelector('h1');
+                    if (h1) h1.textContent = 'Árvore genealógica — ' + familyLabel;
+                    saveToHistory(familyLabel);
+
                     document.getElementById('loader').style.display = 'none';
                 },
                 error(err) {
@@ -1459,18 +2160,78 @@
             });
         }
 
+        function parseAndRenderCombined(rows) {
+            const { people } = processFamilyDataForKinship(rows);
+            
+            // Foca na linhagem se alguém for selecionado, senão mostra visão unificada total
+            if (selectedIdentity && people.has(selectedIdentity)) {
+                fullChartData = buildKinshipData(selectedIdentity, people);
+            } else {
+                const standardRes = processFamilyData(rows);
+                lastGenealogyReport = standardRes.genealogyReport;
+                fullChartData = standardRes.chartData.map(n => Object.assign({}, n));
+            }
+            
+            annotateVisualizationMeta(fullChartData);
+            focusedBranchKey = null;
+
+            initBranchDockInteraction();
+            refreshBranchDockList();
+            renderChart(getViewData());
+            
+            const label = selectedIdentity ? `Mapa: ${selectedIdentity}` : 'Visão Unificada (Completa)';
+            document.title = 'Árvore genealógica — ' + label;
+            const h1 = document.querySelector('h1');
+            if (h1) h1.textContent = 'Árvore genealógica — ' + label;
+            
+            document.getElementById('data-status').textContent = 'Fonte: Unificação de todas as familiares detectadas';
+            document.getElementById('loader').style.display = 'none';
+        }
+
         async function boot(forceNetwork) {
             const loaderMsg = document.getElementById('loader-msg');
             document.getElementById('loader').style.display = 'flex';
+            document.getElementById('unified-badge').style.display = unifiedViewMode ? 'flex' : 'none';
+
             try {
-                if (forceNetwork) {
-                    loaderMsg.textContent = 'Buscando dados frescos na planilha…';
-                    clearCache();
+                if (unifiedViewMode) {
+                    loaderMsg.textContent = 'Unificando árvores do seu histórico…';
+                    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                    const allTexts = [];
+                    for (const h of history) {
+                        const cacheKey = `${CACHE_KEY_PREFIX}_${h.id}_${h.gid}`;
+                        let text = localStorage.getItem(cacheKey);
+                        if (!text || forceNetwork) {
+                            const res = await fetch(buildSheetCsvUrl(h.id, h.gid), { cache: 'no-store' });
+                            if (res.ok) {
+                                text = await res.text();
+                                localStorage.setItem(cacheKey, text);
+                                localStorage.setItem(`${CACHE_META_KEY_PREFIX}_${h.id}_${h.gid}`, JSON.stringify({ t: Date.now() }));
+                            }
+                        }
+                        if (text) allTexts.push(text);
+                    }
+
+                    if (allTexts.length === 0) throw new Error('Nenhuma árvore no histórico para unificar.');
+
+                    // Combina todos os CSVs em uma lista de objetos
+                    let combinedRows = [];
+                    allTexts.forEach(txt => {
+                        const parsed = Papa.parse(txt, { header: true, skipEmptyLines: 'greedy' }).data;
+                        combinedRows = combinedRows.concat(parsed);
+                    });
+
+                    parseAndRenderCombined(combinedRows);
                 } else {
-                    loaderMsg.textContent = 'Carregando (cache ou planilha)…';
+                    if (forceNetwork) {
+                        loaderMsg.textContent = 'Buscando dados frescos na planilha…';
+                        clearCache();
+                    } else {
+                        loaderMsg.textContent = 'Carregando (cache ou planilha)…';
+                    }
+                    const { text, fromCache, savedAt } = await getCsvText(forceNetwork);
+                    parseAndRender(text, fromCache, savedAt);
                 }
-                const { text, fromCache, savedAt } = await getCsvText(forceNetwork);
-                parseAndRender(text, fromCache, savedAt);
             } catch (err) {
                 console.error(err);
                 document.getElementById('loader').style.display = 'none';
@@ -1508,7 +2269,9 @@
             }
 
             currentSheet = parsed;
+            selectedIdentity = null; // Reseta identidade ao mudar de planilha
             syncSheetSourceUi();
+            syncUrlParams();
             focusedBranchKey = null;
             refreshBranchDockList();
             refreshBranchDockActive();
@@ -1516,7 +2279,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            loadSheetFromUrl();
             syncSheetSourceUi();
+            refreshHistoryUi();
             const input = document.getElementById('sheet-url-input');
             if (input) {
                 input.addEventListener('keydown', ev => {
