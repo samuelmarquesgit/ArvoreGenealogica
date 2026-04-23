@@ -2197,10 +2197,12 @@
                     `;
                 })
                 .expandAll()
-                .initialZoom(0.85)
+                .initialZoom(1.0)
                 .render();
 
-            chart.expandAll().fit();
+            // Ao invés de usar .fit() que "encolhe" a árvore, 
+            // mantemos o zoom 1 e apenas garantimos que a raiz esteja visível no topo.
+            chart.expandAll();
         }
 
         function parseAndRender(csvText, fromCache, savedAt) {
