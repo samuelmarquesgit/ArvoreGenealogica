@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.min.js"></script>
@@ -168,6 +169,10 @@
             padding: 0.48rem 0.78rem;
             font-size: 0.8rem;
             white-space: nowrap;
+        }
+
+        .control-group {
+            display: contents;
         }
 
         #chart-container {
@@ -517,20 +522,73 @@
                     #fff;
             }
 
+            .mobile-menu-toggle {
+                display: none;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 0.6rem 0.8rem;
+                font-size: 1.1rem;
+                cursor: pointer;
+            }
+
             @media (max-width: 720px) {
-                header { flex-direction: column; align-items: stretch; }
-                .controls { justify-content: center; }
-                .sheet-source, .history-section, .who-am-i-section {
+                header { 
+                    padding: 0.75rem 1rem;
+                    flex-direction: row; 
+                    justify-content: space-between;
+                    align-items: center; 
+                }
+                .brand { flex: 1; }
+                .subtitle, .legend-hint { display: none; }
+                .mobile-menu-toggle { display: block; }
+                
+                .controls { 
+                    display: none; 
+                    flex-direction: column;
+                    width: 100%;
+                    padding-top: 1rem;
+                    border-top: 1px solid var(--border);
+                    margin-top: 0.5rem;
+                }
+                header.menu-open .controls { display: flex; }
+                header.menu-open .subtitle, header.menu-open .legend-hint { display: block; margin-bottom: 0.5rem; }
+
+                .sheet-source, .history-section, .who-am-i-section, .branch-combobox {
                     width: 100%;
                     min-width: 0;
                     justify-content: space-between;
                 }
-                .sheet-url-input, .history-select, .who-am-i-select {
+                .sheet-url-input, .history-select, .who-am-i-select, .branch-dock-select {
                     min-width: 0;
                     flex: 1 1 auto;
-                    font-size: 0.9rem;
+                    font-size: 0.82rem;
                 }
-                h1 { font-size: 1.15rem; }
+                h1 { font-size: 1.1rem; }
+                .controls button { width: auto; padding: 0.55rem 1rem; font-size: 0.85rem; }
+
+                .control-group {
+                    display: flex;
+                    gap: 0.5rem;
+                    width: 100%;
+                }
+                .control-group button, .control-group .btn-link {
+                    flex: 1;
+                    text-align: center;
+                    justify-content: center;
+                    width: 100%;
+                }
+
+                .sheet-source button {
+                    flex: 0 0 80px;
+                    padding: 0.45rem;
+                    font-size: 0.8rem;
+                }
+
+                .branch-combobox { gap: 0.5rem; }
+                .branch-dock-select { flex: 1; min-width: 0; }
+                .branch-dock-clear { flex: 0 0 80px; padding: 0.45rem; font-size: 0.8rem; }
             }
     </style>
 </head>
@@ -538,18 +596,32 @@
 
     <header>
         <div class="brand">
-            <h1>Árvore genealógica</h1>
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h1>Árvore genealógica</h1>
+                <button type="button" class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Menu de configurações">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
             <p class="subtitle">Role o Mouse ou pince para dar zoom.</p>
             <span id="data-status" class="status"></span>
             <p class="legend-hint">Cada <strong>cor</strong> segue o ramo de um filho(a) direto(a) de Hélio; tons mais escuros nos nomes = mais fundo na linha. Cartões <strong>menores</strong> = gerações mais novas (bisneto, tataraneto).</p>
         </div>
         <div class="controls">
-            <button type="button" class="secondary" onclick="setFamilyBranchFocus(null)">Toda a família</button>
-            <button type="button" onclick="fitChart()">Enquadrar tudo</button>
-            <button type="button" onclick="exportChartImg()">Salvar imagem</button>
-            <button type="button" class="secondary" onclick="refreshFromSheet()" title="Ignora o cache e lê a planilha de novo">Atualizar da planilha</button>
-            <button type="button" class="secondary" onclick="openGenealogyAnalysis()">Análise da planilha</button>
-            <a class="btn-link" id="sheet-link" href="#" target="_blank" rel="noopener">Abrir planilha</a>
+            <div class="control-group">
+                <button type="button" class="secondary" onclick="setFamilyBranchFocus(null)">Toda a família</button>
+                <button type="button" onclick="fitChart()">Enquadrar tudo</button>
+            </div>
+            
+            <div class="control-group">
+                <button type="button" onclick="exportChartImg()">Salvar imagem</button>
+                <button type="button" class="secondary" onclick="refreshFromSheet()" title="Atualizar dos dados frescos">Atualizar da planilha</button>
+            </div>
+
+            <div class="control-group">
+                <button type="button" class="secondary" onclick="openGenealogyAnalysis()">Análise da planilha</button>
+                <a class="btn-link" id="sheet-link" href="#" target="_blank" rel="noopener">Abrir planilha</a>
+            </div>
+
             <div class="sheet-source" aria-label="Fonte da planilha">
                 <input
                     id="sheet-url-input"
@@ -559,7 +631,7 @@
                     autocomplete="off"
                     spellcheck="false"
                 />
-                <button type="button" class="secondary" onclick="applySheetFromInput()">Usar planilha</button>
+                <button type="button" class="secondary" onclick="applySheetFromInput()">Usar</button>
             </div>
             <div id="history-section" class="history-section" style="display: none;">
                 <span class="history-label">Recentes</span>
@@ -2252,7 +2324,25 @@
         }
 
         function exportChartImg() {
-            if (chart && typeof chart.exportImg === 'function') chart.exportImg();
+            if (!chart) return;
+            console.log('v3: Exportando como SVG (Vetor de Alta Qualidade)...');
+            
+            const btn = document.querySelector('button[onclick="exportChartImg()"]');
+            if (btn) btn.textContent = 'Baixando...';
+
+            try {
+                // O formato SVG é imune às travas de segurança que bloqueavam o PNG
+                chart.exportSvg();
+                
+                // Feedback visual de sucesso
+                setTimeout(() => {
+                    if (btn) btn.textContent = 'Salvar imagem';
+                }, 2000);
+            } catch (err) {
+                console.error('Erro na exportação SVG:', err);
+                alert('Erro ao exportar. Tente recarregar a página.');
+                if (btn) btn.textContent = 'Salvar imagem';
+            }
         }
 
         function refreshFromSheet() {
@@ -2276,6 +2366,19 @@
             refreshBranchDockList();
             refreshBranchDockActive();
             boot(true);
+        }
+
+        function toggleMobileMenu() {
+            const header = document.querySelector('header');
+            header.classList.toggle('menu-open');
+            const icon = header.querySelector('.mobile-menu-toggle i');
+            if (header.classList.contains('menu-open')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            } else {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
